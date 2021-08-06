@@ -1,0 +1,4 @@
+beautifulsoup4==4.9.3
+selenium==3.141.0
+soupsieve==2.2.1
+urllib3==1.26.6

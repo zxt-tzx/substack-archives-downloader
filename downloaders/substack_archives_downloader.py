@@ -1,4 +1,3 @@
-from base64 import b64decode
 import os
 import time
 
@@ -35,8 +34,8 @@ class SubstackArchivesDownloader(PDFDownloader):
             self.archive_url = self.root_url + '/archive'
             self.article_tuples: list[ArticleTuple] = []
 
-        # TODO a self-balancing tree would be more efficient O(log n)
-        #   here we will just brute force search for everything in O(n) time (minimal difference for small n...)
+        # TODO a self-balancing tree would be more efficient O(log n) for managing article_tuples
+        # for simplicity, we are just linear searching for everything  O(n) time (minimal difference for small n...)
         def append_article_tuple(self, date: ArticleDateNumeric, title: ArticleTitle, url: ArticleUrl):
             # for assumption that self.article_tuples_cache is sorted from ith to jth most recent
             # need to append article in reverse chronological order (technically can sort also...but meh)
@@ -168,7 +167,7 @@ class SubstackArchivesDownloader(PDFDownloader):
         height_before_scrolling = self.driver.execute_script("return document.body.scrollHeight")
         while True:
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")  # Scroll down to bottom
-            time.sleep(self.waits.long_wait_time)  # TODO wait for JS async calls to finish; quite complex
+            time.sleep(self.wait_time.long_wait_time)  # TODO wait for JS async calls to finish; quite complex
             articles = self.driver.find_elements_by_xpath(self.selectors.article_preview_xpath)
             height_after_scrolling = self.driver.execute_script("return document.body.scrollHeight")
             if height_after_scrolling == height_before_scrolling or len(articles) >= k:
@@ -180,14 +179,14 @@ class SubstackArchivesDownloader(PDFDownloader):
         height_before_scrolling = self.driver.execute_script("return document.body.scrollHeight")
         while True:
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")  # Scroll down to bottom
-            time.sleep(self.waits.long_wait_time)  # TODO wait for JS async calls to finish; quite complex
+            time.sleep(self.wait_time.long_wait_time)  # TODO replace with waiting for JS async calls to finish
             article_previews = self.driver.find_elements_by_xpath(self.selectors.article_preview_xpath)
             height_after_scrolling = self.driver.execute_script("return document.body.scrollHeight")
             last_article_preview = article_previews[-1]
             article_html = last_article_preview.get_attribute('outerHTML')
             article_soup = BeautifulSoup(article_html, 'html.parser')
             raw_date = article_soup.find(*self.selectors.article_preview_date_bs_find_args).text
-            date_numeric = int(helper.process_date(raw_date))
+            date_numeric = helper.process_raw_date_into_int(raw_date)
             if height_after_scrolling == height_before_scrolling or date > date_numeric:
                 return  # strict inequality, in case multiple articles on same date
 
@@ -204,7 +203,7 @@ class SubstackArchivesDownloader(PDFDownloader):
             article_html = article_preview.get_attribute('outerHTML')
             article_soup = BeautifulSoup(article_html, 'html.parser')
             raw_date = article_soup.find(*self.selectors.article_preview_date_bs_find_args).text
-            date_numeric = int(helper.process_date(raw_date))
+            date_numeric = helper.process_raw_date_into_int(raw_date)
             title = article_soup.find(*self.selectors.article_preview_title_bs_find_args).text
             url = article_soup.find(*self.selectors.article_preview_url_bs_find_args).get('href')
             self.cache.append_article_tuple(date_numeric, title, url)
@@ -258,26 +257,4 @@ class SubstackArchivesDownloader(PDFDownloader):
                 # might lead to bugs if similar title + same publication date (quite unlikely)
                 continue
             self.driver.get(url)
-            if self.is_headless:
-                self.write_to_local_file_in_output_folder(filename_path_output)
-            else:
-                self.write_to_temp_folder_and_send_to_output_folder(filename_path_output)
-
-    def write_to_local_file_in_output_folder(self, filename_path_output: str):
-        b64_data = self.driver.execute_cdp_cmd("Page.printToPDF", {
-            "printBackground": True,
-        })['data']
-        b64_data_decoded = b64decode(b64_data, validate=True)
-        helper.validate_b64_string(b64_data_decoded)
-        with open(filename_path_output, "wb") as f:
-            f.write(b64_data_decoded)
-
-    def write_to_temp_folder_and_send_to_output_folder(self, filename_path_output: str):
-        self.driver.execute_script('window.print();')  # download PDF to temp directory
-        # move file from temp directory to output directory and rename file
-        for _, _, filenames in os.walk(self.path_names.temp_path):
-            for filename in filenames:  # should only ever have one file in temp, but you never know. just in case.
-                if filename.lower().endswith('.pdf'):
-                    filename_temp = filenames[0]
-                    filename_path_temp = os.path.join(self.path_names.temp_path, filename_temp)
-                    os.rename(filename_path_temp, filename_path_output)
+            self.save_current_page_as_pdf_in_output_folder(filename_path_output)

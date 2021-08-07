@@ -32,7 +32,7 @@ class SubstackArchivesDownloader(PDFDownloader):
     }
 
     def __init__(self, input_url: str, is_headless: bool = False):
-        validated_url = helper.input_url_validation(input_url)
+        validated_url = helper.input_url_validation(input_url, "substack.com")
         super().__init__(is_headless)
         self._user_credential = UserCredential()
         self._cache = Cache(validated_url)

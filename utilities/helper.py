@@ -1,18 +1,32 @@
 import re
+from urllib.parse import urlparse
+
+from validators.url import url
+
+from utilities import errors
 
 
 def input_url_validation(input_url: str, domain: str = None) -> str:
-    # TODO
-    #  1. process input_url to become exactly  "https://XXXX.domain.com" (get rid of backslash if necessary)
-    #  2. if specify domain as "substack", raise an error if input_url is deformed (hmm)
-    #  3. More complex: how to check if the input subdomain is valid? Need to fire up Selenium...
-    # raise InputUrlInvalidError(f"Input url of {input_url} is invalid")
-    return input_url
-
-
-def input_domain_validation(domain: str) -> bool:
-    # TODO check to make sure domain is a valid XXX.com or XXX.net?
-    return True
+    """
+    :param input_url: user-provided input that needs to be validated.
+    No assumption about what form this might take and need to raise the correct errors accordingly
+    :param domain: system-provided input of "domain.com" for verification to ensure correct site is scraped
+    :return: a clean string of the form "https://subdomain.domain.com"
+    """
+    if not url(input_url, public=True):
+        raise errors.NotUrlError(input_url)
+    o = urlparse(input_url)
+    network_location_string = o.netloc  # of the form "subdomain.domain.com"
+    if domain not in network_location_string:
+        raise errors.DomainMismatchError(input_url, domain)
+    period_count = network_location_string.count('.')
+    if period_count != 2:  # at least one period from domain checking; must have exactly 2 periods
+        raise errors.DeformedSubdomain(input_url)
+    subdomain = network_location_string.split('.')[0]
+    if subdomain == 'www':
+        # TODO: how to check if the input subdomain is valid? Need to fire up Selenium...(skip for now)
+        raise errors.DeformedSubdomain(input_url)
+    return f"https://{network_location_string}"
 
 
 def clean_filename(input_string: str) -> str:

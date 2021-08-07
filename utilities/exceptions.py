@@ -65,6 +65,11 @@ class LoginExceptions(Exception):
     pass
 
 
+class CredentialsNotLoaded(LoginExceptions):  # not sure about this
+    """Raised when trying to get credential before it is loaded"""
+    pass
+
+
 class UsernameNotEmail(LoginExceptions):
     """Username provided is not a valid email"""
 
@@ -85,19 +90,24 @@ class ErrorWhileLoggingIn(LoginExceptions):
         return f"Something wrong happened after {self.when_error_occurred}."
 
 
-class CredentialsNotLoaded(Exception):
-    """Raised when trying to get credential before it is loaded"""
-    pass
-
-
-class PreDownloadExceptions(Exception):
-    """
-    Raised when exception occurs pre-download
-    Actually not an exception if not trying to scale paywall, but why would you want to download then
-    """
-    pass
-
-
-class NotSignedIn(PreDownloadExceptions):
-    """Raised when user tries to download without signing in"""
-    pass
+# class PreDownloadExceptions(Exception):
+#     """
+#     Raised when exception occurs pre-download
+#     Actually not an exception if not trying to scale paywall, but why would you want to download then
+#     """
+#     pass
+#
+#
+# class ErrorWhileScrolling(PreDownloadExceptions):
+#     """Raised if error encountered while scrolling"""
+#     pass
+#
+#
+# class ErrorWhileLoadingCache(PreDownloadExceptions):
+#     """Raised if error encountered while loading articles into cache"""
+#     pass
+#
+#
+# class NotSignedIn(PreDownloadExceptions):
+#     """Raised when user tries to download without signing in"""
+#     pass

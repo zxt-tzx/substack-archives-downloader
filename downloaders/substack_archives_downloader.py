@@ -87,6 +87,10 @@ class SubstackArchivesDownloader(PDFDownloader):
 
     def sign_out(self):
         # TODO
+        """
+        Usually, this is not needed as program simply terminates and kills the driver.
+        But if we deisgn Substack Archives Downloader to be "multi-use" instead of "single-use"...
+        """
         return
 
     # Methods for scrolling down archives page
@@ -95,7 +99,7 @@ class SubstackArchivesDownloader(PDFDownloader):
         height_before_scrolling = self._driver.execute_script("return document.body.scrollHeight")
         while True:
             self._driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")  # Scroll down to bottom
-            time.sleep(self._wait_time.get_long_wait_time())  # TODO wait for JS async calls to finish; quite complex
+            time.sleep(self._wait_time.get_long_wait_time())  # TODO replace with waiting for JS async calls to finish
             articles = self._driver.find_elements_by_xpath(self.element_selectors['article_preview_xpath'])
             height_after_scrolling = self._driver.execute_script("return document.body.scrollHeight")
             if height_after_scrolling == height_before_scrolling or len(articles) >= k:
@@ -139,7 +143,7 @@ class SubstackArchivesDownloader(PDFDownloader):
 
     def _load_k_articles_into_cache(self, k: int):
         if self._cache.get_cache_size() >= k:
-            return
+            return  # all loaded alr, no need to reload again
         self._scroll_until_k_articles(k)
         self._load_all_visible_articles_into_cache()
 
@@ -148,8 +152,7 @@ class SubstackArchivesDownloader(PDFDownloader):
             earliest_article_tuple = self._cache.get_earliest_article_tuple()
             earliest_article_date, _, _ = earliest_article_tuple
             if earliest_article_date < start_date:
-                # all loaded alr, no need to reload again
-                return
+                return  # all loaded alr, no need to reload again
         self._scroll_until_date_reached(start_date)
         self._load_all_visible_articles_into_cache()
 
@@ -157,8 +160,8 @@ class SubstackArchivesDownloader(PDFDownloader):
     def _check_ready_to_download(self):
         if not self._user_credential.is_credential_filled():
             raise exceptions.CredentialsNotLoaded()
-        if not self._signed_in:
-            raise exceptions.NotSignedIn()
+        # if not self._signed_in:
+        #     raise exceptions.NotSignedIn()
 
     def download_k_most_recent(self, k: int):
         self._check_ready_to_download()

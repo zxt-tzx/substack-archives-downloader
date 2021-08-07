@@ -187,7 +187,7 @@ class SubstackArchivesDownloader(PDFDownloader):
         for article_tuple in tuples:
             date, title, url = article_tuple
             filename_output = f'{date} {helper.clean_filename(title)}.pdf'
-            filename_path_output = os.path.join(self.directories.output_path, filename_output)
+            filename_path_output = os.path.join(self.directory.output_path, filename_output)
             if os.path.isfile(filename_path_output):
                 # skip URLs that have been previously downloaded
                 # might lead to bugs if similar title + same publication date (quite unlikely)

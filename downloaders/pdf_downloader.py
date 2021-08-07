@@ -21,7 +21,7 @@ class PDFDownloader:
 
     def __init__(self, is_headless: bool = False):
         self.is_headless = is_headless
-        self.directories = Directories(self.is_headless)
+        self.directory = Directory(self.is_headless)
         self.driver = self.initialize_driver(self.is_headless)
         self.wait_time = WaitTime()
 
@@ -47,16 +47,16 @@ class PDFDownloader:
             }
             profile = {
                 'printing.print_preview_sticky_settings.appState': json.dumps(settings),
-                'savefile.default_directory': self.directories.temp_path
+                'savefile.default_directory': self.directory.temp_path
             }
             chrome_options.add_experimental_option('prefs', profile)
             chrome_options.add_argument('--kiosk-printing')
 
-        return webdriver.Chrome(options=chrome_options, executable_path=self.directories.chromedriver_path)
+        return webdriver.Chrome(options=chrome_options, executable_path=self.directory.chromedriver_path)
 
     def shut_down(self):
         if not self.is_headless:
-            self.directories.delete_temp_folder()
+            self.directory.delete_temp_folder()
         self.driver.quit()
 
     # Methods for generating PDF
@@ -79,11 +79,11 @@ class PDFDownloader:
     def write_to_temp_folder_and_move_to_output_folder(self, filename_path_output: str):
         self.driver.execute_script('window.print();')  # download PDF to temp directory
         # move file from temp directory to output directory and rename file
-        for _, _, filenames in os.walk(self.directories.temp_path):
+        for _, _, filenames in os.walk(self.directory.temp_path):
             for filename in filenames:  # should only ever have one file in temp, but you never know. just in case.
                 if filename.lower().endswith('.pdf'):
                     filename_temp = filenames[0]
-                    filename_path_temp = os.path.join(self.directories.temp_path, filename_temp)
+                    filename_path_temp = os.path.join(self.directory.temp_path, filename_temp)
                     os.rename(filename_path_temp, filename_path_output)
 
     def wait_for_element_to_load(self, by: By, element_target: str) -> bool:
@@ -117,7 +117,7 @@ class PDFDownloader:
             raise ValueError('Missing the PDF file signature')
 
 
-class Directories:
+class Directory:
     # TODO methods to set different directories?
     def __init__(self, is_headless: bool):
         self.path_to_directory = os.path.dirname(__file__)
@@ -134,10 +134,10 @@ class Directories:
             raise errors.ChromedriverMissing(f"chromedriver does not exist at {self.chromedriver_path}")
 
     def ensure_temp_folder_exists(self):
-        Directories.ensure_folder_exists(self.temp_path)
+        Directory.ensure_folder_exists(self.temp_path)
 
     def ensure_output_folder_exists(self):
-        Directories.ensure_folder_exists(self.output_path)
+        Directory.ensure_folder_exists(self.output_path)
 
     def delete_temp_folder(self):
         os.rmdir(self.temp_path)  # remove empty directory

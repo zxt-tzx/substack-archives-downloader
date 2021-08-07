@@ -50,7 +50,7 @@ class SubstackArchivesDownloader(PDFDownloader):
             self._signed_in = success
             return success
 
-        self._driver.get(self._cache._archive_url)
+        self._driver.get(self._cache.get_archive_url())
 
         menu_button = self._driver.find_element_by_css_selector(self.element_selectors['menu_button_css'])
         menu_button.click()
@@ -99,7 +99,7 @@ class SubstackArchivesDownloader(PDFDownloader):
 
     # Methods for scrolling down archives page
     def _scroll_until_k_articles(self, k: int):
-        self._driver.get(self._cache._archive_url)
+        self._driver.get(self._cache.get_archive_url())
         height_before_scrolling = self._driver.execute_script("return document.body.scrollHeight")
         while True:
             self._driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")  # Scroll down to bottom
@@ -111,7 +111,7 @@ class SubstackArchivesDownloader(PDFDownloader):
             height_before_scrolling = height_after_scrolling
 
     def _scroll_until_date_reached(self, date: ArticleDateNumeric):
-        self._driver.get(self._cache._archive_url)
+        self._driver.get(self._cache.get_archive_url())
         height_before_scrolling = self._driver.execute_script("return document.body.scrollHeight")
         while True:
             self._driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")  # Scroll down to bottom
@@ -239,6 +239,11 @@ class SubstackArchivesDownloader(PDFDownloader):
             self._archive_url = self._root_url + '/archive'
             self._article_tuples: list[ArticleTuple] = []
 
+        # Getters for root url and archive url
+        def get_archive_url(self):
+            return self._archive_url
+
+        # Setters and getters for article tuples
         # TODO a self-balancing tree would be more efficient O(log n) for managing article_tuples
         # for simplicity, we are just linear searching for everything  O(n) time (minimal difference for small n...)
         def append_article_tuple(self, date: ArticleDateNumeric, title: ArticleTitle, url: ArticleUrl):

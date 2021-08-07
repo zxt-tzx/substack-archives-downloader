@@ -7,7 +7,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.expected_conditions import staleness_of
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-
 from selenium.common.exceptions import TimeoutException
 
 from utilities import errors, helper
@@ -19,37 +18,11 @@ class PDFDownloader:
     with no assumption that it's supposed to download from Substack or that any login is required
     """
 
-    class Directories:
-        # TODO methods to set different directories?
-        def __init__(self, is_headless: bool):
-            self.path_to_directory = os.path.dirname(__file__)
-            self.chromedriver_path = os.path.join(self.path_to_directory, '../utilities/chromedriver')
-            self.output_path = os.path.join(self.path_to_directory, '../output')
-            self.raise_error_if_chromedriver_missing()
-            self.ensure_output_folder_exists()
-            if not is_headless:
-                self.temp_path = os.path.join(self.path_to_directory, 'temp')
-                self.ensure_temp_folder_exists()
-
-        def raise_error_if_chromedriver_missing(self):
-            if not os.path.exists(self.chromedriver_path):
-                raise errors.ChromedriverMissing(f"chromedriver does not exist at {self.chromedriver_path}")
-
-        def ensure_temp_folder_exists(self):
-            helper.ensure_folder_exists(self.temp_path)
-
-        def ensure_output_folder_exists(self):
-            helper.ensure_folder_exists(self.output_path)
-
-        def delete_temp_folder(self):
-            os.rmdir(self.temp_path)  # remove empty directory
-            # shutil.rmtree(self.temp_path)  # delete directory and all its contents
-
     def __init__(self, is_headless: bool = False):
-        self.wait_time = self.WaitTime()
         self.is_headless = is_headless
-        self.directories = self.Directories(self.is_headless)
+        self.directories = Directories(self.is_headless)
         self.driver = self.initialize_driver(self.is_headless)
+        self.wait_time = WaitTime()
 
     # Methods for managing PDFDownloader's life cycle
     def initialize_driver(self, is_headless):
@@ -101,23 +74,7 @@ class PDFDownloader:
         with open(output_path_with_filename, "wb") as f:
             f.write(b64_data_decoded)
 
-    # Inner class and methods to do with waiting
-    class WaitTime:
-        # TODO include setters to modify wait_time?
-        def __init__(self):
-            # in seconds
-            self.short_wait_time = 0.5
-            self.short_wait_time_interval = 0.2
-            self.long_wait_time = 3
-            self.long_wait_time_interval = 0.5
-            self.max_wait_time = 10
-
-        def get_short_wait_time(self):
-            return helper.generate_random_float_within_interval(self.short_wait_time, self.short_wait_time_interval)
-
-        def get_long_wait_time(self):
-            return helper.generate_random_float_within_interval(self.long_wait_time, self.long_wait_time_interval)
-
+    # Methods to do with waiting
     def write_to_temp_folder_and_move_to_output_folder(self, filename_path_output: str):
         self.driver.execute_script('window.print();')  # download PDF to temp directory
         # move file from temp directory to output directory and rename file
@@ -151,3 +108,47 @@ class PDFDownloader:
         except TimeoutException:
             print("Timeout exception while waiting for [age to load")
             return False
+
+
+class Directories:
+    # TODO methods to set different directories?
+    def __init__(self, is_headless: bool):
+        self.path_to_directory = os.path.dirname(__file__)
+        self.chromedriver_path = os.path.join(self.path_to_directory, '../utilities/chromedriver')
+        self.output_path = os.path.join(self.path_to_directory, '../output')
+        self.raise_error_if_chromedriver_missing()
+        self.ensure_output_folder_exists()
+        if not is_headless:
+            self.temp_path = os.path.join(self.path_to_directory, 'temp')
+            self.ensure_temp_folder_exists()
+
+    def raise_error_if_chromedriver_missing(self):
+        if not os.path.exists(self.chromedriver_path):
+            raise errors.ChromedriverMissing(f"chromedriver does not exist at {self.chromedriver_path}")
+
+    def ensure_temp_folder_exists(self):
+        helper.ensure_folder_exists(self.temp_path)
+
+    def ensure_output_folder_exists(self):
+        helper.ensure_folder_exists(self.output_path)
+
+    def delete_temp_folder(self):
+        os.rmdir(self.temp_path)  # remove empty directory
+        # shutil.rmtree(self.temp_path)  # delete directory and all its contents
+
+
+class WaitTime:
+    # TODO include setters to modify wait_time?
+    def __init__(self):
+        # in seconds
+        self.short_wait_time = 0.5
+        self.short_wait_time_interval = 0.2
+        self.long_wait_time = 3
+        self.long_wait_time_interval = 0.5
+        self.max_wait_time = 10
+
+    def get_short_wait_time(self):
+        return helper.generate_random_float_within_interval(self.short_wait_time, self.short_wait_time_interval)
+
+    def get_long_wait_time(self):
+        return helper.generate_random_float_within_interval(self.long_wait_time, self.long_wait_time_interval)

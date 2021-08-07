@@ -12,6 +12,8 @@ class SubstackArchivesDownloaderUserInterface:
         while True:
             try:
                 input_url = input("Enter the Substack URL you would like to scrape:\n")
+                input_is_headless = input("Would you like to see the browser do the downloading? Y/N")
+                # TODO validation and processing is_headless
                 self.downloader = SubstackArchivesDownloader(input_url, True)
                 return True
             except exceptions.InitialisationExceptions as init_exc:
@@ -26,6 +28,7 @@ class SubstackArchivesDownloaderUserInterface:
         while True:
             try:
                 input_username = input("Please enter your Substack account email address:\n")
+                # TODO validation of email
                 input_password = input("Please enter your Substack account password:\n")
                 # input_password = getpass(prompt="Please enter your Substack account password:\n")
                 self.downloader.log_in(input_username, input_password)

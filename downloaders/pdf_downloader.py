@@ -22,16 +22,16 @@ class PDFDownloader:
     def __init__(self, is_headless: bool = False):
         self.is_headless = is_headless
         self.directory = Directory(self.is_headless)
-        self.driver = self.initialize_driver(self.is_headless)
+        self.driver = self.initialize_driver()
         self.wait_time = WaitTime()
 
     # Methods for managing PDFDownloader's life cycle
-    def initialize_driver(self, is_headless):
+    def initialize_driver(self):
         chrome_options = webdriver.ChromeOptions()
         chrome_options.add_argument('--incognito')
         chrome_options.add_argument('--window-size=1920,1080')
 
-        if is_headless:
+        if self.is_headless:
             chrome_options.add_argument('--headless')
             chrome_options.add_argument('--disable-gpu')
         else:

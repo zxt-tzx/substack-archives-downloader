@@ -33,7 +33,7 @@ class SubstackArchivesDownloader(PDFDownloader):
     def __init__(self, input_url: str, is_headless: bool = False):
         validated_url = helper.input_url_validation(input_url)
         super().__init__(is_headless)
-        self._credentials = self.Credentials()
+        self._user_credential = self.UserCredential()
         self._cache = self.Cache(validated_url)
         self._signed_in = False
 
@@ -41,7 +41,7 @@ class SubstackArchivesDownloader(PDFDownloader):
     def load_credentials(self, input_username: str, input_password: str) -> bool:
         # TODO input validation to make sure username follows email format?
         # TODO make sure input password meet some minimum criteria?
-        self._credentials.set_credentials(input_username, input_password)
+        self._user_credential.set_credential(input_username, input_password)
         return True
 
     def sign_in(self) -> bool:
@@ -76,7 +76,7 @@ class SubstackArchivesDownloader(PDFDownloader):
             print("Something went wrong after clicking log_in_with_password_button")
             return sign_in_exit(False)
 
-        username, password, credentials_loaded = self._credentials.get_credentials()
+        username, password, credentials_loaded = self._user_credential.get_credential()
         if not credentials_loaded:
             print("Credentials not loaded")
             return sign_in_exit(False)
@@ -163,7 +163,7 @@ class SubstackArchivesDownloader(PDFDownloader):
 
     # Methods for downloading
     def _check_ready_to_download(self):
-        if not self._credentials._filled_credentials:
+        if not self._user_credential.is_credential_filled():
             raise errors.CredentialsNotLoaded()
         if not self._signed_in:
             raise errors.NotSignedIn()
@@ -219,19 +219,22 @@ class SubstackArchivesDownloader(PDFDownloader):
     def process_raw_date_into_int(raw_date: str) -> int:
         return int(SubstackArchivesDownloader.process_raw_date_into_string(raw_date))
 
-    class Credentials:
+    class UserCredential:
         def __init__(self):
             self._username = ""
             self._password = ""
-            self._filled_credentials = False
+            self._is_credential_filled = False
 
-        def get_credentials(self) -> tuple[str, str, bool]:
-            return self._username, self._password, self._filled_credentials
+        def get_credential(self) -> tuple[str, str, bool]:
+            return self._username, self._password, self._is_credential_filled
 
-        def set_credentials(self, input_username: str, input_password: str):
+        def set_credential(self, input_username: str, input_password: str):
             self._username = input_username
             self._password = input_password
-            self._filled_credentials = True
+            self._is_credential_filled = True
+
+        def is_credential_filled(self):
+            return self._is_credential_filled
 
     class Cache:
         def __init__(self, validated_url: str):

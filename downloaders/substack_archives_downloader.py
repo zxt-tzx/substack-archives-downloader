@@ -6,7 +6,7 @@ from typing import Union
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 
-from utilities import errors, helper
+from utilities import exceptions, helper
 from downloaders.pdf_downloader import PDFDownloader
 
 ArticleDateNumeric = int
@@ -165,9 +165,9 @@ class SubstackArchivesDownloader(PDFDownloader):
     # Methods for downloading
     def _check_ready_to_download(self):
         if not self._user_credential.is_credential_filled():
-            raise errors.CredentialsNotLoaded()
+            raise exceptions.CredentialsNotLoaded()
         if not self._signed_in:
-            raise errors.NotSignedIn()
+            raise exceptions.NotSignedIn()
 
     def download_k_most_recent(self, k: int):
         self._check_ready_to_download()

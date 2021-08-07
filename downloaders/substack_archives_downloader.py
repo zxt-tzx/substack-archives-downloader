@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 import time
+from typing import Union
 
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
@@ -15,7 +16,7 @@ ArticleTuple = tuple[ArticleDateNumeric, ArticleTitle, ArticleUrl]
 
 
 class SubstackArchivesDownloader(PDFDownloader):
-    element_selectors: dict[str, str] = {
+    element_selectors: dict[str, Union[str, tuple]] = {
         # elements used in sign-in
         'menu_button_css': '.menu-button > svg',
         'go_to_login_link_text': 'Log in',

@@ -128,14 +128,18 @@ class Directory:
         if not is_headless:
             self.temp_path = os.path.join(self._path_to_directory, 'temp')
             self._ensure_temp_folder_exists()
+            self._check_temp_folder_is_empty()
 
     # Methods used in initialization
     def _raise_error_if_chromedriver_missing(self):
         if not os.path.exists(self.chromedriver_path):
-            raise errors.ChromedriverMissing(f"chromedriver does not exist at {self.chromedriver_path}")
+            raise errors.ChromedriverMissing(self.chromedriver_path)
 
     def _ensure_temp_folder_exists(self):
         Directory.ensure_folder_exists(self.temp_path)
+
+    def _check_temp_folder_is_empty(self):
+        Directory.check_folder_is_empty(self.temp_path)
 
     def _ensure_output_folder_exists(self):
         Directory.ensure_folder_exists(self.output_path)
@@ -150,6 +154,11 @@ class Directory:
     def ensure_folder_exists(path_to_folder: str):
         if not os.path.isdir(path_to_folder):
             os.mkdir(path_to_folder)
+
+    @staticmethod
+    def check_folder_is_empty(path_to_folder: str):
+        if len(os.listdir(path_to_folder)) != 0:
+            raise (errors.TempFolderNotEmpty(path_to_folder))
 
 
 class WaitTime:

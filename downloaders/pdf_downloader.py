@@ -1,6 +1,7 @@
 from base64 import b64decode
 import json
 import os
+import random
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -9,7 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 
-from utilities import errors, helper
+from utilities import errors
 
 
 class PDFDownloader:
@@ -70,7 +71,7 @@ class PDFDownloader:
             "printBackground": True,
         })['data']
         b64_data_decoded = b64decode(b64_data, validate=True)
-        helper.validate_b64_string(b64_data_decoded)
+        PDFDownloader.validate_b64_string(b64_data_decoded)
         with open(output_path_with_filename, "wb") as f:
             f.write(b64_data_decoded)
 
@@ -109,6 +110,12 @@ class PDFDownloader:
             print("Timeout exception while waiting for [age to load")
             return False
 
+    @staticmethod
+    def validate_b64_string(b64_string: bytes):
+        if b64_string[0:4] != b'%PDF':
+            # TODO use more specific error?
+            raise ValueError('Missing the PDF file signature')
+
 
 class Directories:
     # TODO methods to set different directories?
@@ -127,14 +134,19 @@ class Directories:
             raise errors.ChromedriverMissing(f"chromedriver does not exist at {self.chromedriver_path}")
 
     def ensure_temp_folder_exists(self):
-        helper.ensure_folder_exists(self.temp_path)
+        Directories.ensure_folder_exists(self.temp_path)
 
     def ensure_output_folder_exists(self):
-        helper.ensure_folder_exists(self.output_path)
+        Directories.ensure_folder_exists(self.output_path)
 
     def delete_temp_folder(self):
         os.rmdir(self.temp_path)  # remove empty directory
         # shutil.rmtree(self.temp_path)  # delete directory and all its contents
+
+    @staticmethod
+    def ensure_folder_exists(path_to_folder: str):
+        if not os.path.isdir(path_to_folder):
+            os.mkdir(path_to_folder)
 
 
 class WaitTime:
@@ -148,7 +160,11 @@ class WaitTime:
         self.max_wait_time = 10
 
     def get_short_wait_time(self):
-        return helper.generate_random_float_within_interval(self.short_wait_time, self.short_wait_time_interval)
+        return WaitTime.generate_random_float_within_interval(self.short_wait_time, self.short_wait_time_interval)
 
     def get_long_wait_time(self):
-        return helper.generate_random_float_within_interval(self.long_wait_time, self.long_wait_time_interval)
+        return WaitTime.generate_random_float_within_interval(self.long_wait_time, self.long_wait_time_interval)
+
+    @staticmethod
+    def generate_random_float_within_interval(average: float, interval: float) -> float:
+        return random.uniform(average - interval, average + interval)

@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import time
 
@@ -121,7 +122,7 @@ class SubstackArchivesDownloader(PDFDownloader):
             article_html = last_article_preview.get_attribute('outerHTML')
             article_soup = BeautifulSoup(article_html, 'html.parser')
             raw_date = article_soup.find(*self.element_selectors['article_preview_date_bs_find_args']).text
-            date_numeric = helper.process_raw_date_into_int(raw_date)
+            date_numeric = SubstackArchivesDownloader.process_raw_date_into_int(raw_date)
             if height_after_scrolling == height_before_scrolling or date > date_numeric:
                 return  # strict inequality, in case multiple articles on same date
 
@@ -139,7 +140,7 @@ class SubstackArchivesDownloader(PDFDownloader):
             article_html = article_preview.get_attribute('outerHTML')
             article_soup = BeautifulSoup(article_html, 'html.parser')
             raw_date = article_soup.find(*self.element_selectors['article_preview_date_bs_find_args']).text
-            date_numeric = helper.process_raw_date_into_int(raw_date)
+            date_numeric = SubstackArchivesDownloader.process_raw_date_into_int(raw_date)
             title = article_soup.find(*self.element_selectors['article_preview_title_bs_find_args']).text
             url = article_soup.find(*self.element_selectors['article_preview_url_bs_find_args']).get('href')
             self.cache.append_article_tuple(date_numeric, title, url)
@@ -193,6 +194,30 @@ class SubstackArchivesDownloader(PDFDownloader):
                 continue
             self.driver.get(url)
             self.save_current_page_as_pdf_in_output_folder(filename_path_output)
+
+    @staticmethod
+    def process_raw_date_into_string(raw_date: str) -> str:
+        """
+        :param raw_date takes the following formats
+        - if published today: "4 hr ago"
+        - if published this year but not today: "Aug 1"
+        - if published before this year: "Dec 18, 2020"
+        :return the publication date in yyyymmdd
+        """
+        if "hr" in raw_date or "ago" in raw_date:
+            return datetime.today().strftime('%Y%m%d')
+        published_this_year = "," not in raw_date
+        if published_this_year:
+            yyyy = datetime.today().strftime('%Y')
+        else:
+            yyyy = raw_date[-4:]
+            raw_date = raw_date[:-6]
+        mmdd = datetime.strptime(raw_date, '%b %d').strftime('%m%d')
+        return f'{yyyy}{mmdd}'
+
+    @staticmethod
+    def process_raw_date_into_int(raw_date: str) -> int:
+        return int(SubstackArchivesDownloader.process_raw_date_into_string(raw_date))
 
     class Credentials:
         def __init__(self):

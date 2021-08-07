@@ -111,7 +111,7 @@ class PDFDownloader:
             return False
 
     @staticmethod
-    def validate_b64_string(b64_string: bytes):
+    def validate_b64_string_is_pdf(b64_string: bytes):
         if b64_string[0:4] != b'%PDF':
             # TODO use more specific error?
             raise ValueError('Missing the PDF file signature')

@@ -3,29 +3,29 @@ from urllib.parse import urlparse
 
 from validators.url import url
 
-from utilities import errors
+from utilities import exceptions
 
 
 def input_url_validation(input_url: str, domain: str = None) -> str:
     """
     :param input_url: user-provided input that needs to be validated.
-    No assumption about what form this might take and need to raise the correct errors accordingly
+    No assumption about what form this might take and need to raise the correct exception accordingly
     :param domain: system-provided input of "domain.com" for verification to ensure correct site is scraped
     :return: a clean string of the form "https://subdomain.domain.com"
     """
     if not url(input_url, public=True):
-        raise errors.NotUrlError(input_url)
+        raise exceptions.NotUrlException(input_url)
     o = urlparse(input_url)
     network_location_string = o.netloc  # of the form "subdomain.domain.com"
     if domain not in network_location_string:
-        raise errors.DomainMismatchError(input_url, domain)
+        raise exceptions.DomainMismatchException(input_url, domain)
     period_count = network_location_string.count('.')
     if period_count != 2:  # at least one period from domain checking; must have exactly 2 periods
-        raise errors.DeformedSubdomain(input_url)
+        raise exceptions.DeformedSubdomain(input_url)
     subdomain = network_location_string.split('.')[0]
     if subdomain == 'www':
         # TODO: how to check if the input subdomain is valid? Need to fire up Selenium...(skip for now)
-        raise errors.DeformedSubdomain(input_url)
+        raise exceptions.DeformedSubdomain(input_url)
     return f"https://{network_location_string}"
 
 

@@ -10,7 +10,7 @@ from selenium.webdriver.support.expected_conditions import staleness_of
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from utilities import errors
+from utilities import exceptions
 
 
 class PDFDownloader:
@@ -133,7 +133,7 @@ class Directory:
     # Methods used in initialization
     def _raise_error_if_chromedriver_missing(self):
         if not os.path.exists(self.chromedriver_path):
-            raise errors.ChromedriverMissing(self.chromedriver_path)
+            raise exceptions.ChromedriverMissing(self.chromedriver_path)
 
     def _ensure_temp_folder_exists(self):
         Directory.ensure_folder_exists(self.temp_path)
@@ -158,7 +158,7 @@ class Directory:
     @staticmethod
     def check_folder_is_empty(path_to_folder: str):
         if len(os.listdir(path_to_folder)) != 0:
-            raise (errors.TempFolderNotEmpty(path_to_folder))
+            raise (exceptions.TempFolderNotEmpty(path_to_folder))
 
 
 class WaitTime:

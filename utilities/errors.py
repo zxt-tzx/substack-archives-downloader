@@ -24,8 +24,10 @@ class InputUrlInvalid(InitErrors):
 
 
 class PreDownloadError(Error):
-    """Raised when error occurs pre-download
-    Actually not an error if not trying to scale paywall, but why would you want to download then"""
+    """
+    Raised when error occurs pre-download
+    Actually not an error if not trying to scale paywall, but why would you want to download then
+    """
     pass
 
 

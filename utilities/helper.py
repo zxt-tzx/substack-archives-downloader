@@ -1,4 +1,5 @@
 from datetime import datetime
+import os
 import random
 import re
 
@@ -58,6 +59,11 @@ def process_raw_date_into_string(raw_date: str) -> str:
 
 def process_raw_date_into_int(raw_date: str) -> int:
     return int(process_raw_date_into_string(raw_date))
+
+
+def ensure_folder_exists(path_to_folder: str):
+    if not os.path.isdir(path_to_folder):
+        os.mkdir(path_to_folder)
 
 
 def validate_b64_string(b64_string: bytes):

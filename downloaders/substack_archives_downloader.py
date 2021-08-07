@@ -227,10 +227,8 @@ class SubstackArchivesDownloader(PDFDownloader):
     def ready_to_download(self):
         if not self.credentials.filled_credentials:
             raise errors.CredentialsNotLoaded()
-
         if not self.signed_in:
             raise errors.NotSignedIn()
-        return
 
     def download_k_most_recent(self, k: int):
         self.ready_to_download()
@@ -251,7 +249,7 @@ class SubstackArchivesDownloader(PDFDownloader):
         for article_tuple in tuples:
             date, title, url = article_tuple
             filename_output = f'{date} {helper.clean_filename(title)}.pdf'
-            filename_path_output = os.path.join(self.path_names.output_path, filename_output)
+            filename_path_output = os.path.join(self.directories.output_path, filename_output)
             if os.path.isfile(filename_path_output):
                 # skip URLs that have been previously downloaded
                 # might lead to bugs if similar title + same publication date (quite unlikely)

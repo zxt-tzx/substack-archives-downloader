@@ -33,8 +33,8 @@ class SubstackArchivesDownloader(PDFDownloader):
     def __init__(self, input_url: str, is_headless: bool = False):
         validated_url = helper.input_url_validation(input_url)
         super().__init__(is_headless)
-        self._user_credential = self.UserCredential()
-        self._cache = self.Cache(validated_url)
+        self._user_credential = UserCredential()
+        self._cache = Cache(validated_url)
         self._signed_in = False
 
     # Methods for managing sign in
@@ -219,78 +219,80 @@ class SubstackArchivesDownloader(PDFDownloader):
     def process_raw_date_into_int(raw_date: str) -> int:
         return int(SubstackArchivesDownloader.process_raw_date_into_string(raw_date))
 
-    class UserCredential:
-        def __init__(self):
-            self._username = ""
-            self._password = ""
-            self._is_credential_filled = False
 
-        def get_credential(self) -> tuple[str, str, bool]:
-            return self._username, self._password, self._is_credential_filled
+class UserCredential:
+    def __init__(self):
+        self._username = ""
+        self._password = ""
+        self._is_credential_filled = False
 
-        def set_credential(self, input_username: str, input_password: str):
-            self._username = input_username
-            self._password = input_password
-            self._is_credential_filled = True
+    def get_credential(self) -> tuple[str, str, bool]:
+        return self._username, self._password, self._is_credential_filled
 
-        def is_credential_filled(self):
-            return self._is_credential_filled
+    def set_credential(self, input_username: str, input_password: str):
+        self._username = input_username
+        self._password = input_password
+        self._is_credential_filled = True
 
-    class Cache:
-        def __init__(self, validated_url: str):
-            self._root_url = validated_url
-            self._archive_url = self._root_url + '/archive'
-            self._article_tuples: list[ArticleTuple] = []
+    def is_credential_filled(self):
+        return self._is_credential_filled
 
-        # Getters for root url and archive url
-        def get_archive_url(self):
-            return self._archive_url
 
-        # Setters and getters for article tuples
-        # TODO a self-balancing tree would be more efficient O(log n) for managing article_tuples
-        # for simplicity, we are just linear searching for everything  O(n) time (minimal difference for small n...)
-        def append_article_tuple(self, date: ArticleDateNumeric, title: ArticleTitle, url: ArticleUrl):
-            # for assumption that self.article_tuples_cache is sorted from ith to jth most recent
-            # need to append article in reverse chronological order (technically can sort also...but meh)
-            self._article_tuples.append((date, title, url))
+class Cache:
+    def __init__(self, validated_url: str):
+        self._root_url = validated_url
+        self._archive_url = self._root_url + '/archive'
+        self._article_tuples: list[ArticleTuple] = []
 
-        def get_cache_size(self) -> int:
-            return len(self._article_tuples)
+    # Getters for root url and archive url
+    def get_archive_url(self):
+        return self._archive_url
 
-        def is_cache_empty(self) -> bool:
-            return len(self._article_tuples) == 0
+    # Setters and getters for article tuples
+    # TODO a self-balancing tree would be more efficient O(log n) for managing article_tuples
+    # for simplicity, we are just linear searching for everything  O(n) time (minimal difference for small n...)
+    def append_article_tuple(self, date: ArticleDateNumeric, title: ArticleTitle, url: ArticleUrl):
+        # for assumption that self.article_tuples_cache is sorted from ith to jth most recent
+        # need to append article in reverse chronological order (technically can sort also...but meh)
+        self._article_tuples.append((date, title, url))
 
-        def get_article_tuples_by_date(self, date: int) -> list[ArticleTuple]:
-            output = []
-            for article in self._article_tuples:
-                article_date, _, _ = article
-                if date == article_date:
-                    output.append(article)
-            return output
+    def get_cache_size(self) -> int:
+        return len(self._article_tuples)
 
-        def get_article_tuples_by_date_range(self, start_date: ArticleDateNumeric,
-                                             end_date: ArticleDateNumeric) -> list[ArticleTuple]:
-            assert end_date >= start_date
-            output = []
-            # TODO: use binary search to find start_date faster?
-            for article in self._article_tuples:
-                article_date, _, _ = article
-                if start_date <= article_date <= end_date:
-                    output.append(article)
-            return output
+    def is_cache_empty(self) -> bool:
+        return len(self._article_tuples) == 0
 
-        def get_article_tuple_by_idx(self, idx: int) -> ArticleTuple:
-            return self._article_tuples[idx]
+    def get_article_tuples_by_date(self, date: int) -> list[ArticleTuple]:
+        output = []
+        for article in self._article_tuples:
+            article_date, _, _ = article
+            if date == article_date:
+                output.append(article)
+        return output
 
-        def get_latest_article_tuple(self) -> ArticleTuple:
-            return self._article_tuples[0]
+    def get_article_tuples_by_date_range(self, start_date: ArticleDateNumeric,
+                                         end_date: ArticleDateNumeric) -> list[ArticleTuple]:
+        assert end_date >= start_date
+        output = []
+        # TODO: use binary search to find start_date faster?
+        for article in self._article_tuples:
+            article_date, _, _ = article
+            if start_date <= article_date <= end_date:
+                output.append(article)
+        return output
 
-        def get_earliest_article_tuple(self) -> ArticleTuple:
-            # if self.get_cache_size() == 0:
-            #     return None
-            return self._article_tuples[-1]
+    def get_article_tuple_by_idx(self, idx: int) -> ArticleTuple:
+        return self._article_tuples[idx]
 
-        def get_most_recent_k_article_tuples(self, k: int) -> list[ArticleTuple]:
-            # assumption: self.article_tuples_cache is sorted from ith to jth most recent
-            assert k >= 1
-            return self._article_tuples[:k]
+    def get_latest_article_tuple(self) -> ArticleTuple:
+        return self._article_tuples[0]
+
+    def get_earliest_article_tuple(self) -> ArticleTuple:
+        # if self.get_cache_size() == 0:
+        #     return None
+        return self._article_tuples[-1]
+
+    def get_most_recent_k_article_tuples(self, k: int) -> list[ArticleTuple]:
+        # assumption: self.article_tuples_cache is sorted from ith to jth most recent
+        assert k >= 1
+        return self._article_tuples[:k]

@@ -36,7 +36,7 @@ def clean_filename(input_string: str) -> str:
     return input_sans_illegal_chars.strip(" ")
 
 
-def process_date(raw_date: str) -> str:
+def process_raw_date_into_string(raw_date: str) -> str:
     """
     :param raw_date takes the following formats
     - if published today: "4 hr ago"
@@ -54,6 +54,10 @@ def process_date(raw_date: str) -> str:
         raw_date = raw_date[:-6]
     mmdd = datetime.strptime(raw_date, '%b %d').strftime('%m%d')
     return f'{yyyy}{mmdd}'
+
+
+def process_raw_date_into_int(raw_date: str) -> int:
+    return int(process_raw_date_into_string(raw_date))
 
 
 def validate_b64_string(b64_string: bytes):

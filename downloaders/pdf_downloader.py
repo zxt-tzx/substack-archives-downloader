@@ -1,3 +1,4 @@
+from base64 import b64decode
 import json
 import os
 
@@ -24,21 +25,21 @@ class PDFDownloader:
             self.path_to_directory = os.path.dirname(__file__)
             self.chromedriver_path = os.path.join(self.path_to_directory, '../utilities/chromedriver')
             self.output_path = os.path.join(self.path_to_directory, '../output')
-            self.check_chromedriver_exists()
-            self.check_output_folder_exists()
+            self.throw_error_if_chromedriver_missing()
+            self.ensure_output_folder_exists()
             if not is_headless:
                 self.temp_path = os.path.join(self.path_to_directory, 'temp')
-                self.check_temp_folder_exists()
+                self.ensure_temp_folder_exists()
 
-        def check_chromedriver_exists(self):
+        def throw_error_if_chromedriver_missing(self):
             if not os.path.exists(self.chromedriver_path):
                 raise errors.ChromedriverMissing(f"chromedriver does not exist at {self.chromedriver_path}")
 
-        def check_temp_folder_exists(self):
+        def ensure_temp_folder_exists(self):
             if not os.path.isdir(self.temp_path):
                 os.mkdir(self.temp_path)
 
-        def check_output_folder_exists(self):
+        def ensure_output_folder_exists(self):
             if not os.path.isdir(self.output_path):
                 os.mkdir(self.output_path)
 
@@ -46,28 +47,13 @@ class PDFDownloader:
             os.rmdir(self.temp_path)  # remove empty directory
             # shutil.rmtree(self.temp_path)  # delete directory and all its contents
 
-    class Waits:
-        # TODO include setters to modify waits?
-        def __init__(self):
-            # in seconds
-            self.short_wait_time = 0.5
-            self.short_wait_time_interval = 0.2
-            self.long_wait_time = 3
-            self.long_wait_time_interval = 0.5
-            self.max_wait_time = 10
-
-        def get_short_wait_time(self):
-            return helper.generate_random_float_within_interval(self.short_wait_time, self.short_wait_time_interval)
-
-        def get_long_wait_time(self):
-            return helper.generate_random_float_within_interval(self.long_wait_time, self.long_wait_time_interval)
-
     def __init__(self, is_headless: bool = False):
-        self.waits = self.Waits()
+        self.wait_time = self.WaitTime()
         self.is_headless = is_headless
         self.path_names = self.PathNames(self.is_headless)
         self.driver = self.initialize_driver(self.is_headless)
 
+    # Methods for managing PDFDownloader's life cycle
     def initialize_driver(self, is_headless):
         chrome_options = webdriver.ChromeOptions()
         chrome_options.add_argument('--incognito')
@@ -96,19 +82,62 @@ class PDFDownloader:
 
         return webdriver.Chrome(options=chrome_options, executable_path=self.path_names.chromedriver_path)
 
+    def shut_down(self):
+        if not self.is_headless:
+            self.path_names.delete_temp_folder()
+        self.driver.quit()
+
+    # Methods for generating PDF
+    def save_current_page_as_pdf_in_output_folder(self, output_path_with_filename: str):
+        if self.is_headless:
+            self.write_to_local_file_in_output_folder(output_path_with_filename)
+        else:
+            self.write_to_temp_folder_and_move_to_output_folder(output_path_with_filename)
+
+    def write_to_local_file_in_output_folder(self, output_path_with_filename: str):
+        b64_data = self.driver.execute_cdp_cmd("Page.printToPDF", {
+            "printBackground": True,
+        })['data']
+        b64_data_decoded = b64decode(b64_data, validate=True)
+        helper.validate_b64_string(b64_data_decoded)
+        with open(output_path_with_filename, "wb") as f:
+            f.write(b64_data_decoded)
+
+    # Inner class and methods to do with waiting
+    class WaitTime:
+        # TODO include setters to modify wait_time?
+        def __init__(self):
+            # in seconds
+            self.short_wait_time = 0.5
+            self.short_wait_time_interval = 0.2
+            self.long_wait_time = 3
+            self.long_wait_time_interval = 0.5
+            self.max_wait_time = 10
+
+        def get_short_wait_time(self):
+            return helper.generate_random_float_within_interval(self.short_wait_time, self.short_wait_time_interval)
+
+        def get_long_wait_time(self):
+            return helper.generate_random_float_within_interval(self.long_wait_time, self.long_wait_time_interval)
+
+    def write_to_temp_folder_and_move_to_output_folder(self, filename_path_output: str):
+        self.driver.execute_script('window.print();')  # download PDF to temp directory
+        # move file from temp directory to output directory and rename file
+        for _, _, filenames in os.walk(self.path_names.temp_path):
+            for filename in filenames:  # should only ever have one file in temp, but you never know. just in case.
+                if filename.lower().endswith('.pdf'):
+                    filename_temp = filenames[0]
+                    filename_path_temp = os.path.join(self.path_names.temp_path, filename_temp)
+                    os.rename(filename_path_temp, filename_path_output)
+
     def wait_for_element_to_load(self, by: By, element_target: str) -> bool:
         try:
-            WebDriverWait(self.driver, self.waits.max_wait_time).until(
+            WebDriverWait(self.driver, self.wait_time.max_wait_time).until(
                 EC.presence_of_element_located((by, element_target)))
             return True
         except TimeoutException:
             print("Timeout exception while waiting for element to load")
             return False
-
-    def shut_down(self):
-        if not self.is_headless:
-            self.path_names.delete_temp_folder()
-        self.driver.quit()
 
     # TODO figure out how to wait for async javascript to finish loading
     #  1. Look into polling2
@@ -116,9 +145,9 @@ class PDFDownloader:
     #  Tried and failed:
     #  WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
     #  WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return "return jQuery.active') == '0')
-    def wait_for_page_to_finish_loading(self):
+    def wait_for_page_to_finish_loading(self):  # TODO WIP
         try:
-            WebDriverWait(self.driver, self.waits.max_wait_time).until(
+            WebDriverWait(self.driver, self.wait_time.max_wait_time).until(
                 staleness_of(self.driver.find_element_by_tag_name('html')))
             return True
         except TimeoutException:

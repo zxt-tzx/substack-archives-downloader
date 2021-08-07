@@ -2,4 +2,4 @@
 /output/
 /downloaders/__pycache__/
 /utilities/__pycache__/
-/main.py
+/__pycache__/

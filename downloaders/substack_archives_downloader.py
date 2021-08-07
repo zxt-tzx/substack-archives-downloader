@@ -39,48 +39,39 @@ class SubstackArchivesDownloader(PDFDownloader):
         self._signed_in = False
 
     # Methods for managing sign in
-    def load_credentials(self, input_username: str, input_password: str) -> bool:
-        # TODO input validation to make sure username follows email format?
+    def log_in(self, input_username: str, input_password: str):
+        self._load_credentials(input_username, input_password)
+        self._log_in_using_browser()
+
+    def _load_credentials(self, input_username: str, input_password: str):
+        helper.input_email_validation(input_username)
         # TODO make sure input password meet some minimum criteria?
         self._user_credential.set_credential(input_username, input_password)
-        return True
 
-    def sign_in(self) -> bool:
-        # TODO avoid redundant sign-ins; track sign_in state?
-        def sign_in_exit(success: bool) -> bool:
-            self._signed_in = success
-            return success
-
+    def _log_in_using_browser(self):
         self._driver.get(self._cache.get_archive_url())
-
         menu_button = self._driver.find_element_by_css_selector(self.element_selectors['menu_button_css'])
         menu_button.click()
         loaded_successfully = self._wait_for_element_to_load(By.LINK_TEXT,
                                                              self.element_selectors['go_to_login_link_text'])
         if not loaded_successfully:
-            print("Something went wrong after clicking menu_button")  # TODO proper logging?
-            return sign_in_exit(False)
+            raise exceptions.ErrorWhileLoggingIn("clicking menu_button")
 
         go_to_login_button = self._driver.find_element_by_link_text(self.element_selectors['go_to_login_link_text'])
         go_to_login_button.click()
         loaded_successfully = self._wait_for_element_to_load(By.LINK_TEXT,
                                                              self.element_selectors['log_in_with_password_link_text'])
         if not loaded_successfully:
-            print("Something went wrong after clicking go_to_login_button")
-            return sign_in_exit(False)
+            raise exceptions.ErrorWhileLoggingIn("clicking go_to_login_button")
 
         log_in_with_password_button = self._driver.find_element_by_link_text(
             self.element_selectors['log_in_with_password_link_text'])
         log_in_with_password_button.click()
         loaded_successfully = self._wait_for_element_to_load(By.XPATH, self.element_selectors['username_field_xpath'])
         if not loaded_successfully:
-            print("Something went wrong after clicking log_in_with_password_button")
-            return sign_in_exit(False)
+            raise exceptions.ErrorWhileLoggingIn("clicking log_in_with_password_button")
 
-        username, password, credentials_loaded = self._user_credential.get_credential()
-        if not credentials_loaded:
-            print("Credentials not loaded")
-            return sign_in_exit(False)
+        username, password = self._user_credential.get_credential()
 
         username_field = self._driver.find_element_by_xpath(self.element_selectors['username_field_xpath'])
         username_field.send_keys(username)
@@ -91,8 +82,8 @@ class SubstackArchivesDownloader(PDFDownloader):
 
         loaded_successfully = self._wait_for_element_to_load(By.XPATH, self.element_selectors['article_preview_xpath'])
         if not loaded_successfully:
-            print("Something went wrong after submitting credentials")
-        return sign_in_exit(loaded_successfully)
+            raise exceptions.ErrorWhileLoggingIn("submitting credentials")
+        self._signed_in = True
 
     def sign_out(self):
         # TODO
@@ -227,8 +218,10 @@ class UserCredential:
         self._password = ""
         self._is_credential_filled = False
 
-    def get_credential(self) -> tuple[str, str, bool]:
-        return self._username, self._password, self._is_credential_filled
+    def get_credential(self) -> tuple[str, str]:
+        if self._is_credential_filled:
+            return self._username, self._password
+        raise exceptions.CredentialsNotLoaded()
 
     def set_credential(self, input_username: str, input_password: str):
         self._username = input_username

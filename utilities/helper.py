@@ -2,6 +2,7 @@ import re
 from urllib.parse import urlparse
 
 from validators.url import url
+from validators.email import email
 
 from utilities import exceptions
 
@@ -27,6 +28,11 @@ def input_url_validation(input_url: str, domain: str = None) -> str:
         # TODO: how to check if the input subdomain is valid? Need to fire up Selenium...(skip for now)
         raise exceptions.DeformedSubdomain(input_url)
     return f"https://{network_location_string}"
+
+
+def input_email_validation(input_email: str):
+    if not email(input_email):
+        raise exceptions.UsernameNotEmail(input_email)
 
 
 def clean_filename(input_string: str) -> str:

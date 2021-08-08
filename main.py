@@ -14,7 +14,7 @@ def main():
 
     successful_download = ui.get_user_download_choices()
     if successful_download:
-        print_upon_exist_success()
+        print_upon_exit_success()
     else:
         print_upon_exit_failure()
 
@@ -23,7 +23,7 @@ def print_upon_exit_failure():
     print("We're sorry that something has gone wrong.")
 
 
-def print_upon_exist_success():
+def print_upon_exit_success():
     print("Your article(s) have been downloaded. Thank you for using Substack Archives Downloader. Have a nice day!")
 
 

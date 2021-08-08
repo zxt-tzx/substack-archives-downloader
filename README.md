@@ -50,13 +50,13 @@ While this program works as-is, there is still a long list of possible improveme
 ### To-Do
 - Write tests for the project and set up a continuous integration pipeline on GitHub. This would help to prevent breaking changes to the code as updates are made.
 - Get article title, date and URL via API and process the JSON. Having this would provide redundancy to the current method of obtaining such article metadata.
-- Create abstractions to simplify the user interface and get rid of the many, quite confusing `while True` loops. 
 - Improve input validation and exception-handling (came across this: https://dev.to/rinaarts/declutter-your-python-code-with-error-handling-decorators-2db9)
 
 ### Maybe
 - Build a simpler Substack Article Downloader such that user can provide specific links to Substack articles that they would like to download. 
 - Improve the data structure in the `Cache` for greater efficiency. Also, track additional data (e.g. distinguish between paid and free articles, so as to provide option to only download paywalled articles).  
 - More options on saving as PDF (e.g. `printBackground`, page size etc.)
+- Create abstractions to simplify the user interface and get rid of the many, quite confusing `while True` loops. 
 
 ### For Further Extension
 - To convert articles into PDF, the browser must visit each article while logged into an account with a subscription. Currently, this is achieved through the user entering their username and password into the program directly. 

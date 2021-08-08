@@ -6,7 +6,7 @@ from typing import Union
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 
-from utilities import errors, helper
+from utilities import exceptions, helper
 from downloaders.pdf_downloader import PDFDownloader
 
 ArticleDateNumeric = int
@@ -32,55 +32,46 @@ class SubstackArchivesDownloader(PDFDownloader):
     }
 
     def __init__(self, input_url: str, is_headless: bool = False):
-        validated_url = helper.input_url_validation(input_url)
+        validated_url = helper.input_url_validation(input_url, "substack.com")
         super().__init__(is_headless)
         self._user_credential = UserCredential()
         self._cache = Cache(validated_url)
         self._signed_in = False
 
     # Methods for managing sign in
-    def load_credentials(self, input_username: str, input_password: str) -> bool:
-        # TODO input validation to make sure username follows email format?
+    def log_in(self, input_username: str, input_password: str):
+        self._load_credentials(input_username, input_password)
+        self._log_in_using_browser()
+
+    def _load_credentials(self, input_username: str, input_password: str):
+        helper.input_email_validation(input_username)
         # TODO make sure input password meet some minimum criteria?
         self._user_credential.set_credential(input_username, input_password)
-        return True
 
-    def sign_in(self) -> bool:
-        # TODO avoid redundant sign-ins; track sign_in state?
-        def sign_in_exit(success: bool) -> bool:
-            self._signed_in = success
-            return success
-
+    def _log_in_using_browser(self):
         self._driver.get(self._cache.get_archive_url())
-
         menu_button = self._driver.find_element_by_css_selector(self.element_selectors['menu_button_css'])
         menu_button.click()
         loaded_successfully = self._wait_for_element_to_load(By.LINK_TEXT,
                                                              self.element_selectors['go_to_login_link_text'])
         if not loaded_successfully:
-            print("Something went wrong after clicking menu_button")  # TODO proper logging?
-            return sign_in_exit(False)
+            raise exceptions.ErrorWhileLoggingIn("clicking menu_button")
 
         go_to_login_button = self._driver.find_element_by_link_text(self.element_selectors['go_to_login_link_text'])
         go_to_login_button.click()
         loaded_successfully = self._wait_for_element_to_load(By.LINK_TEXT,
                                                              self.element_selectors['log_in_with_password_link_text'])
         if not loaded_successfully:
-            print("Something went wrong after clicking go_to_login_button")
-            return sign_in_exit(False)
+            raise exceptions.ErrorWhileLoggingIn("clicking go_to_login_button")
 
         log_in_with_password_button = self._driver.find_element_by_link_text(
             self.element_selectors['log_in_with_password_link_text'])
         log_in_with_password_button.click()
         loaded_successfully = self._wait_for_element_to_load(By.XPATH, self.element_selectors['username_field_xpath'])
         if not loaded_successfully:
-            print("Something went wrong after clicking log_in_with_password_button")
-            return sign_in_exit(False)
+            raise exceptions.ErrorWhileLoggingIn("clicking log_in_with_password_button")
 
-        username, password, credentials_loaded = self._user_credential.get_credential()
-        if not credentials_loaded:
-            print("Credentials not loaded")
-            return sign_in_exit(False)
+        username, password = self._user_credential.get_credential()
 
         username_field = self._driver.find_element_by_xpath(self.element_selectors['username_field_xpath'])
         username_field.send_keys(username)
@@ -91,11 +82,15 @@ class SubstackArchivesDownloader(PDFDownloader):
 
         loaded_successfully = self._wait_for_element_to_load(By.XPATH, self.element_selectors['article_preview_xpath'])
         if not loaded_successfully:
-            print("Something went wrong after submitting credentials")
-        return sign_in_exit(loaded_successfully)
+            raise exceptions.ErrorWhileLoggingIn("submitting credentials")
+        self._signed_in = True
 
     def sign_out(self):
         # TODO
+        """
+        Usually, this is not needed as program simply terminates and kills the driver.
+        But if we deisgn Substack Archives Downloader to be "multi-use" instead of "single-use"...
+        """
         return
 
     # Methods for scrolling down archives page
@@ -104,7 +99,7 @@ class SubstackArchivesDownloader(PDFDownloader):
         height_before_scrolling = self._driver.execute_script("return document.body.scrollHeight")
         while True:
             self._driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")  # Scroll down to bottom
-            time.sleep(self._wait_time.get_long_wait_time())  # TODO wait for JS async calls to finish; quite complex
+            time.sleep(self._wait_time.get_long_wait_time())  # TODO replace with waiting for JS async calls to finish
             articles = self._driver.find_elements_by_xpath(self.element_selectors['article_preview_xpath'])
             height_after_scrolling = self._driver.execute_script("return document.body.scrollHeight")
             if height_after_scrolling == height_before_scrolling or len(articles) >= k:
@@ -148,7 +143,7 @@ class SubstackArchivesDownloader(PDFDownloader):
 
     def _load_k_articles_into_cache(self, k: int):
         if self._cache.get_cache_size() >= k:
-            return
+            return  # all loaded alr, no need to reload again
         self._scroll_until_k_articles(k)
         self._load_all_visible_articles_into_cache()
 
@@ -157,17 +152,16 @@ class SubstackArchivesDownloader(PDFDownloader):
             earliest_article_tuple = self._cache.get_earliest_article_tuple()
             earliest_article_date, _, _ = earliest_article_tuple
             if earliest_article_date < start_date:
-                # all loaded alr, no need to reload again
-                return
+                return  # all loaded alr, no need to reload again
         self._scroll_until_date_reached(start_date)
         self._load_all_visible_articles_into_cache()
 
     # Methods for downloading
     def _check_ready_to_download(self):
         if not self._user_credential.is_credential_filled():
-            raise errors.CredentialsNotLoaded()
-        if not self._signed_in:
-            raise errors.NotSignedIn()
+            raise exceptions.CredentialsNotLoaded()
+        # if not self._signed_in:
+        #     raise exceptions.NotSignedIn()
 
     def download_k_most_recent(self, k: int):
         self._check_ready_to_download()
@@ -177,10 +171,8 @@ class SubstackArchivesDownloader(PDFDownloader):
 
     def download_date_range(self, start_date: ArticleDateNumeric, end_date: ArticleDateNumeric):
         self._check_ready_to_download()
-        print("Ready to download")  # for testing purposes TODO comment out
         assert start_date <= end_date
         self._load_all_articles_after_start_date(start_date)
-        print("Loaded successfully")  # for testing purposes TODO comment out
         article_tuples = self._cache.get_article_tuples_by_date_range(start_date, end_date)
         self._convert_article_tuples_to_pdfs(article_tuples)
 
@@ -227,8 +219,10 @@ class UserCredential:
         self._password = ""
         self._is_credential_filled = False
 
-    def get_credential(self) -> tuple[str, str, bool]:
-        return self._username, self._password, self._is_credential_filled
+    def get_credential(self) -> tuple[str, str]:
+        if self._is_credential_filled:
+            return self._username, self._password
+        raise exceptions.CredentialsNotLoaded()
 
     def set_credential(self, input_username: str, input_password: str):
         self._username = input_username

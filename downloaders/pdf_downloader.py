@@ -6,11 +6,10 @@ import random
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.expected_conditions import staleness_of
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from utilities import errors
+from utilities import exceptions
 
 
 class PDFDownloader:
@@ -86,13 +85,14 @@ class PDFDownloader:
                     filename_path_temp = os.path.join(self._directory.temp_path, filename_temp)
                     os.rename(filename_path_temp, filename_path_output)
 
+    # not sure if there is a better way of doing this; return boolean so exact exception can var depending on context
     def _wait_for_element_to_load(self, by: By, element_target: str) -> bool:
         try:
             WebDriverWait(self._driver, self._wait_time.max_wait_time).until(
                 EC.presence_of_element_located((by, element_target)))
             return True
         except TimeoutException:
-            print("Timeout exception while waiting for element to load")
+            print("Timeout exception while waiting for element to load")  # TODO proper logging?
             return False
 
     # TODO figure out how to wait for async javascript to finish loading
@@ -101,14 +101,14 @@ class PDFDownloader:
     #  Tried and failed:
     #  WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
     #  WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return "return jQuery.active') == '0')
-    def _wait_for_page_to_finish_loading(self):  # TODO WIP
-        try:
-            WebDriverWait(self._driver, self._wait_time.max_wait_time).until(
-                staleness_of(self._driver.find_element_by_tag_name('html')))
-            return True
-        except TimeoutException:
-            print("Timeout exception while waiting for [age to load")
-            return False
+    # def _wait_for_page_to_finish_loading(self):  # TODO WIP
+    #     try:
+    #         WebDriverWait(self._driver, self._wait_time.max_wait_time).until(
+    #             staleness_of(self._driver.find_element_by_tag_name('html')))
+    #         return True
+    #     except TimeoutException:
+    #         print("Timeout exception while waiting for [age to load")
+    #         return False
 
     @staticmethod
     def validate_b64_string_is_pdf(b64_string: bytes):
@@ -123,19 +123,23 @@ class Directory:
         self._path_to_directory = os.path.dirname(__file__)
         self.chromedriver_path = os.path.join(self._path_to_directory, '../utilities/chromedriver')
         self.output_path = os.path.join(self._path_to_directory, '../output')
-        self._raise_error_if_chromedriver_missing()
+        self._raise_exception_if_chromedriver_missing()
         self._ensure_output_folder_exists()
         if not is_headless:
             self.temp_path = os.path.join(self._path_to_directory, 'temp')
             self._ensure_temp_folder_exists()
+            self._check_temp_folder_is_empty()
 
     # Methods used in initialization
-    def _raise_error_if_chromedriver_missing(self):
+    def _raise_exception_if_chromedriver_missing(self):
         if not os.path.exists(self.chromedriver_path):
-            raise errors.ChromedriverMissing(f"chromedriver does not exist at {self.chromedriver_path}")
+            raise exceptions.ChromedriverMissing(self.chromedriver_path)
 
     def _ensure_temp_folder_exists(self):
         Directory.ensure_folder_exists(self.temp_path)
+
+    def _check_temp_folder_is_empty(self):
+        Directory.check_folder_is_empty(self.temp_path)
 
     def _ensure_output_folder_exists(self):
         Directory.ensure_folder_exists(self.output_path)
@@ -150,6 +154,11 @@ class Directory:
     def ensure_folder_exists(path_to_folder: str):
         if not os.path.isdir(path_to_folder):
             os.mkdir(path_to_folder)
+
+    @staticmethod
+    def check_folder_is_empty(path_to_folder: str):
+        if len(os.listdir(path_to_folder)) != 0:
+            raise (exceptions.TempFolderNotEmpty(path_to_folder))
 
 
 class WaitTime:

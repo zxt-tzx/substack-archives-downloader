@@ -171,10 +171,8 @@ class SubstackArchivesDownloader(PDFDownloader):
 
     def download_date_range(self, start_date: ArticleDateNumeric, end_date: ArticleDateNumeric):
         self._check_ready_to_download()
-        print("Ready to download")  # for testing purposes TODO comment out
         assert start_date <= end_date
         self._load_all_articles_after_start_date(start_date)
-        print("Loaded successfully")  # for testing purposes TODO comment out
         article_tuples = self._cache.get_article_tuples_by_date_range(start_date, end_date)
         self._convert_article_tuples_to_pdfs(article_tuples)
 

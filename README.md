@@ -69,5 +69,8 @@ While this program works as-is, there is still a long list of possible improveme
 
 ## Why It’s OK to Download the Archive
 > It is very important to clearly define what a subscriptions means. First, it’s not a donation: it is asking a customer to pay money for a product. What, then, is the product? It is not, in fact, any one article (a point that is missed by the misguided focus on micro-transactions). Rather, a subscriber is paying for the regular delivery of well-defined value.
-> 
+> Each of those words is meaningful:
+> - *Paying*: A subscription is an ongoing commitment to the *production* of content, not a one-off payment for one piece of content that catches the eye.
+> - *Regular Delivery*: A subscriber does not need to depend on the random discovery of content; said content can be delivered to the subscriber directly, whether that be email, a bookmark, or an app.
+> - *Well-defined Value*: A subscriber needs to know what they are paying for, and it needs to be worth it.
 > —<cite>Ben Thompson, [The Local News Business Model](https://stratechery.com/2017/the-local-news-business-model/)</cite>

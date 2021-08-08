@@ -2,7 +2,6 @@ from downloaders.substack_archives_downloader import SubstackArchivesDownloader
 from utilities import exceptions, helper
 
 
-# TODO: allow user to indicate whether they want to use headless or normal browser
 class SubstackArchivesDownloaderUserInterface:
 
     def __init__(self):

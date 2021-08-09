@@ -74,4 +74,5 @@ While this program works as-is, there is still a long list of possible improveme
 > - *Paying*: A subscription is an ongoing commitment to the *production* of content, not a one-off payment for one piece of content that catches the eye.
 > - *Regular Delivery*: A subscriber does not need to depend on the random discovery of content; said content can be delivered to the subscriber directly, whether that be email, a bookmark, or an app.
 > - *Well-defined Value*: A subscriber needs to know what they are paying for, and it needs to be worth it.
+> 
 > —<cite>Ben Thompson, [The Local News Business Model](https://stratechery.com/2017/the-local-news-business-model/)</cite>

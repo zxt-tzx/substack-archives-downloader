@@ -6,7 +6,8 @@ This program uses Selenium to fire up a browser, log into the user-provided Subs
 
 ## Quick Start
 ```
-# Instructions for how to use this
+pip install -r requirements.txt
+python3.9 main.py
 ```
 
 Running the browser in the foreground is advised (see known issue below). 

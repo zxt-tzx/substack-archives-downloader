@@ -90,6 +90,24 @@ class ErrorWhileLoggingIn(LoginExceptions):
         return f"Something wrong happened after {self.when_error_occurred}."
 
 
+class SubstackUrlNotSet(Exception):
+    pass
+
+
+class ErrorWhileLoadingArticles(Exception):
+    def __init__(self, url_loaded: str):
+        self.url_loaded = url_loaded
+
+    def __str__(self):
+        return f"Error while loading {self.url_loaded}."
+
+
+class InitialLoadError(ErrorWhileLoadingArticles):
+    pass
+
+
+class SubsequentLoadError(ErrorWhileLoadingArticles):
+    pass
 # class PreDownloadExceptions(Exception):
 #     """
 #     Raised when exception occurs pre-download

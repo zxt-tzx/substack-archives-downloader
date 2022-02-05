@@ -22,7 +22,7 @@ class PDFDownloader:
         self._is_headless = is_headless
         self._directory = Directory(self._is_headless)
         self._driver = self._initialize_driver()
-        self._wait_time = WaitTime()
+        self._wait_time = WaitTime()  # randomized wait time
 
     # Methods for managing PDFDownloader's life cycle
     def _initialize_driver(self):
@@ -85,8 +85,8 @@ class PDFDownloader:
                     filename_path_temp = os.path.join(self._directory.temp_path, filename_temp)
                     os.rename(filename_path_temp, filename_path_output)
 
-    # not sure if there is a better way of doing this; return boolean so exact exception can var depending on context
-    def _wait_for_element_to_load(self, by: By, element_target: str) -> bool:
+    # not sure if there is a better way of doing this; return boolean so exact exception can vary depending on context
+    def _wait_for_element_to_load(self, by: By.LINK_TEXT, element_target: str) -> bool:
         try:
             WebDriverWait(self._driver, self._wait_time.max_wait_time).until(
                 EC.presence_of_element_located((by, element_target)))
@@ -114,7 +114,7 @@ class PDFDownloader:
     def validate_b64_string_is_pdf(b64_string: bytes):
         if b64_string[0:4] != b'%PDF':
             # TODO use more specific error?
-            raise ValueError('Missing the PDF file signature')
+            raise ValueError('Missing PDF file signature')
 
 
 class Directory:

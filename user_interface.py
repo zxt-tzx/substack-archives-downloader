@@ -11,14 +11,14 @@ class SubstackArchivesDownloaderUserInterface:
         while True:
             try:
                 input_url = input("Enter the Substack URL you would like to scrape:\n")
-                helper.input_url_validation(input_url, "substack.com")
+                helper.input_url_contains_subdomain(input_url, "substack.com")
                 while True:
                     input_is_headless = input("Would you like to see the browser while it performs the scraping? \n"
                                               "Please type 'Y' or 'N'.\n")
                     if input_is_headless == 'Y' or input_is_headless == 'N':
                         break
                     else:
-                        print("Please either type 'Y' or 'N'.")
+                        print("Please type 'Y' or 'N'.") # would be good to accept 'y' or 'n' etc.
                 is_headless = input_is_headless == 'N'
                 if is_headless:
                     print("The browser will perform the scraping in the background.")
@@ -79,7 +79,7 @@ class SubstackArchivesDownloaderUserInterface:
                             break
                         else:
                             print("Sorry, please enter a valid date range in the format YYYYMMDD.")
-                    if user_choice == "2":
+                    elif user_choice == "2":
                         user_k = input("Please specify the number of most recent articles you'd like to download: \n")
                         if self.validate_k(user_k):
                             print(f"Please wait while the {user_k} most recently published articles "

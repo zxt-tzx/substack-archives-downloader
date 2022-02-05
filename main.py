@@ -1,7 +1,7 @@
 from user_interface import SubstackArchivesDownloaderUserInterface as downloaderUI
 
 
-def main():
+def main() -> None:
     ui = downloaderUI()
     successful_initialisation = ui.get_substack_url()
     if not successful_initialisation:
@@ -19,11 +19,11 @@ def main():
         print_upon_exit_failure()
 
 
-def print_upon_exit_failure():
-    print("We're sorry that something has gone wrong.")
+def print_upon_exit_failure() -> None:
+    print("We're sorry, something has gone wrong.")
 
 
-def print_upon_exit_success():
+def print_upon_exit_success() -> None:
     print("Your article(s) have been downloaded. Thank you for using Substack Archives Downloader. Have a nice day!")
 
 

@@ -86,7 +86,7 @@ class PDFDownloader:
                     os.rename(filename_path_temp, filename_path_output)
 
     # not sure if there is a better way of doing this; return boolean so exact exception can vary depending on context
-    def _wait_for_element_to_load(self, by: By.LINK_TEXT, element_target: str) -> bool:
+    def _wait_for_element_to_load(self, by: type(By), element_target: str) -> bool:
         try:
             WebDriverWait(self._driver, self._wait_time.max_wait_time).until(
                 EC.presence_of_element_located((by, element_target)))

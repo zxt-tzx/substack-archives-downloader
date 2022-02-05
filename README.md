@@ -6,18 +6,22 @@ This program uses Selenium to fire up a browser, log into the user-provided Subs
 
 ## Quick Start
 
-```bash
-pip install -r requirements.txt
-python3.9 main.py
-```
+1. Install the required libraries via `pip install -r requirements.txt`
+2. Replace the default ChromeDriver file (in `./utilities/`) to one that corresponds to what your machine is running. Download [here](https://chromedriver.chromium.org/downloads).
+3. Run the program using `python3.9 main.py` (the script was written in Python 3.9 is necessary because it offers a simplified typing system compared to previous Python versions. This might present a slight complication to users running an older version of Python).
+4. Follow the instructions shown in the command line. Running the browser in the foreground is advised (see known issue below).
 
-Running the browser in the foreground is advised (see known issue below).
+## Changelog
 
-I wrote this using Python 3.9 because it offers a simplified typing system compared to previous Python versions. This might present a slight complication to users running an older version of Python.
+- February 2022
+	- Update to support Substack newsletters hosted on custom domain
+- August 2021: Create initial working version
+
 
 ## Known Issues
 
 - Sometimes, running the downloader using a headless browser sometimes errors out. **[To update with error message.]**
+- **[UPDATE on 2022-02-05]:** Currently, download via date range isn't working. Downloading most recent k articles still works. Fixing in progress.
 
 ## How It Works
 

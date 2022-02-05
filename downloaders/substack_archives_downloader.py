@@ -19,6 +19,7 @@ class SubstackArchivesDownloader(PDFDownloader):
     element_selectors: dict[str, Union[str, tuple]] = {
         # elements used in sign-in
         'menu_button_css': '.menu-button > svg',
+        'sign_in_button_css': '.premium',
         'go_to_login_link_text': 'Log in',
         'log_in_with_password_link_text': 'log in with password',
         'username_field_xpath': '//input[@name="email"]',
@@ -32,15 +33,16 @@ class SubstackArchivesDownloader(PDFDownloader):
     }
 
     def __init__(self, input_url: str, is_headless: bool = False):
-        validated_url = helper.input_url_contains_subdomain(input_url, "substack.com")
+        helper.input_is_url(input_url)
         super().__init__(is_headless)
         self._user_credential = UserCredential()
-        self._cache = Cache(validated_url)
+        self._cache = Cache(input_url)
         self._signed_in = False
 
     # Methods for managing sign in
     def log_in(self, input_username: str, input_password: str):
         self._load_credentials(input_username, input_password)
+        self._navigate_to_sign_in_page()
         self._log_in_using_browser()
 
     def _load_credentials(self, input_username: str, input_password: str):
@@ -48,17 +50,15 @@ class SubstackArchivesDownloader(PDFDownloader):
         # TODO make sure input password meet some minimum criteria?
         self._user_credential.set_credential(input_username, input_password)
 
-    def _log_in_using_browser(self):
+    def _navigate_to_sign_in_page(self):
         self._driver.get(self._cache.get_archive_url())
         menu_button = self._driver.find_element_by_css_selector(self.element_selectors['menu_button_css'])
         menu_button.click()
-        loaded_successfully = self._wait_for_element_to_load(By.LINK_TEXT,
-                                                             self.element_selectors['go_to_login_link_text'])
-        if not loaded_successfully:
-            raise exceptions.ErrorWhileLoggingIn("clicking menu_button")
+        sign_in_button = self._driver.find_element_by_css_selector(self.element_selectors['sign_in_button_css'])
+        sign_in_url = sign_in_button.get_attribute('href')
+        self._driver.get(sign_in_url)
 
-        go_to_login_button = self._driver.find_element_by_link_text(self.element_selectors['go_to_login_link_text'])
-        go_to_login_button.click()
+    def _log_in_using_browser(self):
         loaded_successfully = self._wait_for_element_to_load(By.LINK_TEXT,
                                                              self.element_selectors['log_in_with_password_link_text'])
         if not loaded_successfully:
@@ -67,12 +67,12 @@ class SubstackArchivesDownloader(PDFDownloader):
         log_in_with_password_button = self._driver.find_element_by_link_text(
             self.element_selectors['log_in_with_password_link_text'])
         log_in_with_password_button.click()
+
         loaded_successfully = self._wait_for_element_to_load(By.XPATH, self.element_selectors['username_field_xpath'])
         if not loaded_successfully:
             raise exceptions.ErrorWhileLoggingIn("clicking log_in_with_password_button")
 
         username, password = self._user_credential.get_credential()
-
         username_field = self._driver.find_element_by_xpath(self.element_selectors['username_field_xpath'])
         username_field.send_keys(username)
         password_field = self._driver.find_element_by_xpath(self.element_selectors['password_field_xpath'])
@@ -235,7 +235,7 @@ class UserCredential:
 
 class Cache:
     def __init__(self, validated_url: str):
-        self._root_url = validated_url
+        self._root_url = validated_url if validated_url[-1] != '/' else validated_url[:-1]
         self._archive_url = self._root_url + '/archive'
         self._article_tuples: list[ArticleTuple] = []
 

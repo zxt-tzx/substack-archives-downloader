@@ -6,12 +6,14 @@ class SubstackArchivesDownloaderUserInterface:
 
     def __init__(self):
         self.downloader = None
+        self.username = None
+        self.password = None
 
     def get_substack_url(self) -> bool:
         while True:
             try:
-                input_url = input("Enter the Substack URL you would like to scrape:\n")
-                helper.input_url_contains_subdomain(input_url, "substack.com")
+                input_url = input("Enter the URL of the Substack-hosted newsletter you would like to scrape:\n")
+                helper.input_is_url(input_url)
                 while True:
                     input_is_headless = input("Would you like to see the browser while it performs the scraping? \n"
                                               "Please type 'Y' or 'N'.\n")
@@ -41,8 +43,23 @@ class SubstackArchivesDownloaderUserInterface:
                 helper.input_email_validation(input_username)
                 input_password = input("Please enter your Substack account password:\n")
                 # input_password = getpass(prompt="Please enter your Substack account password:\n")
+                self.username = input_username
+                self.password = input_password
+                return True
+            except exceptions.LoginExceptions as login_exc:
+                print(login_exc)
+                print("Please log in again or try again later.\n")
+            except Exception as exc:
+                print(exc)
+                print("Unexpected error occurred while getting credentials.")
+                self.downloader.shut_down()
+                return False
+
+    def login_using_credential(self) -> bool:
+        while True:
+            try:
                 print("Please wait while we log in using the credential you provided...")
-                self.downloader.log_in(input_username, input_password)
+                self.downloader.log_in(self.username, self.password)
                 print("Log in successful.")
                 return True
             except exceptions.LoginExceptions as login_exc:
@@ -54,6 +71,7 @@ class SubstackArchivesDownloaderUserInterface:
                 self.downloader.shut_down()
                 return False
 
+    # TODO decompose this method for easier debugging
     def get_user_download_choices(self) -> bool:
         while True:
             try:

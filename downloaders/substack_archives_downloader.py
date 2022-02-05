@@ -1,18 +1,17 @@
 from datetime import datetime
 import os
-import time
 from typing import Union
 
-from bs4 import BeautifulSoup
+import requests
 from selenium.webdriver.common.by import By
 
 from utilities import exceptions, helper
 from downloaders.pdf_downloader import PDFDownloader
 
-ArticleDateNumeric = int
+ArticlePostDate = int
 ArticleTitle = str
 ArticleUrl = str
-ArticleTuple = tuple[ArticleDateNumeric, ArticleTitle, ArticleUrl]
+ArticleTuple = tuple[ArticlePostDate, ArticleTitle, ArticleUrl]
 
 
 class SubstackArchivesDownloader(PDFDownloader):
@@ -25,37 +24,57 @@ class SubstackArchivesDownloader(PDFDownloader):
         'username_field_xpath': '//input[@name="email"]',
         'password_field_xpath': '//input[@name="password"]',
         'submit_button_xpath': '//button[@type="submit"]',
-        # elements used on archives page
-        'article_preview_xpath': '//*[@class="post-preview-content"]',
-        'article_preview_date_bs_find_args': ("td", {"class": "post-meta-item post-date"}),
-        'article_preview_title_bs_find_args': ("a", {"class": "post-preview-title newsletter"}),
-        'article_preview_url_bs_find_args': ("a", {"class": "post-preview-title newsletter"}),
     }
 
     def __init__(self, input_url: str, is_headless: bool = False):
         helper.input_is_url(input_url)
         super().__init__(is_headless)
+        self._url_cache = URLCache(input_url)
         self._user_credential = UserCredential()
-        self._cache = Cache(input_url)
         self._signed_in = False
+        self.session = None
 
     # Methods for managing sign in
     def log_in(self, input_username: str, input_password: str):
+        self._navigate_to_sign_in_page()  # TODO: we can navigate to sign in page without logging in
         self._load_credentials(input_username, input_password)
-        self._navigate_to_sign_in_page()
         self._log_in_using_browser()
 
+    def download_k_most_recent(self, k: int):
+        self._check_ready_to_download()
+        self._load_k_articles_into_cache(k)
+        article_tuples = self._url_cache.get_most_recent_k_article_tuples(k)
+        self._convert_article_tuples_to_pdfs(article_tuples)
+
+    def download_date_range(self, start_date: ArticlePostDate, end_date: ArticlePostDate):
+        self._check_ready_to_download()
+        assert start_date <= end_date
+        self._load_articles_in_date_range(start_date, end_date)
+        article_tuples = self._url_cache.get_article_tuples_by_date_range(start_date, end_date)
+        self._convert_article_tuples_to_pdfs(article_tuples)
+
+    def sign_out(self):
+        # TODO
+        """
+        Usually, this is not needed as program simply terminates and kills the driver.
+        But if we design Substack Archives Downloader to be "multi-use" instead of "single-use"...
+        """
+        return
+
+    # Methods for logging in
     def _load_credentials(self, input_username: str, input_password: str):
         helper.input_email_validation(input_username)
         # TODO make sure input password meet some minimum criteria?
         self._user_credential.set_credential(input_username, input_password)
 
     def _navigate_to_sign_in_page(self):
-        self._driver.get(self._cache.get_archive_url())
+        self._driver.get(self._url_cache.get_archive_url())
         menu_button = self._driver.find_element_by_css_selector(self.element_selectors['menu_button_css'])
         menu_button.click()
         sign_in_button = self._driver.find_element_by_css_selector(self.element_selectors['sign_in_button_css'])
         sign_in_url = sign_in_button.get_attribute('href')
+        substack_subdomain = SubstackArchivesDownloader.extract_substack_subdomain(sign_in_url)
+        self._url_cache.set_substack_url(substack_subdomain)
         self._driver.get(sign_in_url)
 
     def _log_in_using_browser(self):
@@ -79,82 +98,7 @@ class SubstackArchivesDownloader(PDFDownloader):
         password_field.send_keys(password)
         submit_button = self._driver.find_element_by_xpath(self.element_selectors['submit_button_xpath'])
         submit_button.click()
-
-        loaded_successfully = self._wait_for_element_to_load(By.XPATH, self.element_selectors['article_preview_xpath'])
-        if not loaded_successfully:
-            raise exceptions.ErrorWhileLoggingIn("submitting credentials")
         self._signed_in = True
-
-    def sign_out(self):
-        # TODO
-        """
-        Usually, this is not needed as program simply terminates and kills the driver.
-        But if we deisgn Substack Archives Downloader to be "multi-use" instead of "single-use"...
-        """
-        return
-
-    # Methods for scrolling down archives page
-    def _scroll_until_k_articles(self, k: int):
-        self._driver.get(self._cache.get_archive_url())
-        height_before_scrolling = self._driver.execute_script("return document.body.scrollHeight")
-        while True:
-            self._driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")  # Scroll down to bottom
-            time.sleep(self._wait_time.get_long_wait_time())  # TODO replace with waiting for JS async calls to finish
-            articles = self._driver.find_elements_by_xpath(self.element_selectors['article_preview_xpath'])
-            height_after_scrolling = self._driver.execute_script("return document.body.scrollHeight")
-            if height_after_scrolling == height_before_scrolling or len(articles) >= k:
-                return  # stop scrolling if reach end of scroll OR predetermined no. of URLs attained
-            height_before_scrolling = height_after_scrolling
-
-    def _scroll_until_date_reached(self, date: ArticleDateNumeric):
-        self._driver.get(self._cache.get_archive_url())
-        height_before_scrolling = self._driver.execute_script("return document.body.scrollHeight")
-        while True:
-            self._driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")  # Scroll down to bottom
-            time.sleep(self._wait_time.get_long_wait_time())  # TODO replace with waiting for JS async calls to finish
-            article_previews = self._driver.find_elements_by_xpath(self.element_selectors['article_preview_xpath'])
-            height_after_scrolling = self._driver.execute_script("return document.body.scrollHeight")
-            last_article_preview = article_previews[-1]
-            article_html = last_article_preview.get_attribute('outerHTML')
-            article_soup = BeautifulSoup(article_html, 'html.parser')
-            raw_date = article_soup.find(*self.element_selectors['article_preview_date_bs_find_args']).text
-            date_numeric = SubstackArchivesDownloader.process_raw_date_into_int(raw_date)
-            if height_after_scrolling == height_before_scrolling or date > date_numeric:
-                return  # strict inequality, in case multiple articles on same date
-
-    """
-    Assumptions for load_XXX functions: 
-    - In between loads, there hasn't been new article published. TODO: Actually verify this (edge case, troublesome)
-    - Articles are sorted from latest to earliest in cache
-    If we switch data structures or expect the cache to persist, would need to tweak these functions accordingly 
-    """
-
-    # Methods for saving article-related info into cache
-    def _load_all_visible_articles_into_cache(self):
-        article_previews = self._driver.find_elements_by_xpath(self.element_selectors['article_preview_xpath'])
-        for article_preview in article_previews:
-            article_html = article_preview.get_attribute('outerHTML')
-            article_soup = BeautifulSoup(article_html, 'html.parser')
-            raw_date = article_soup.find(*self.element_selectors['article_preview_date_bs_find_args']).text
-            date_numeric = SubstackArchivesDownloader.process_raw_date_into_int(raw_date)
-            title = article_soup.find(*self.element_selectors['article_preview_title_bs_find_args']).text
-            url = article_soup.find(*self.element_selectors['article_preview_url_bs_find_args']).get('href')
-            self._cache.append_article_tuple(date_numeric, title, url)
-
-    def _load_k_articles_into_cache(self, k: int):
-        if self._cache.get_cache_size() >= k:
-            return  # all loaded alr, no need to reload again
-        self._scroll_until_k_articles(k)
-        self._load_all_visible_articles_into_cache()
-
-    def _load_all_articles_after_start_date(self, start_date: ArticleDateNumeric):
-        if self._cache.get_cache_size() != 0:
-            earliest_article_tuple = self._cache.get_earliest_article_tuple()
-            earliest_article_date, _, _ = earliest_article_tuple
-            if earliest_article_date < start_date:
-                return  # all loaded alr, no need to reload again
-        self._scroll_until_date_reached(start_date)
-        self._load_all_visible_articles_into_cache()
 
     # Methods for downloading
     def _check_ready_to_download(self):
@@ -163,18 +107,86 @@ class SubstackArchivesDownloader(PDFDownloader):
         # if not self._signed_in:
         #     raise exceptions.NotSignedIn()
 
-    def download_k_most_recent(self, k: int):
-        self._check_ready_to_download()
-        self._load_k_articles_into_cache(k)
-        article_tuples = self._cache.get_most_recent_k_article_tuples(k)
-        self._convert_article_tuples_to_pdfs(article_tuples)
+    def _initialize_for_api_call(self):
+        self.session = requests.Session()
+        selenium_user_agent = self._driver.execute_script("return navigator.userAgent")
+        self.session.headers.update({'User-Agent': selenium_user_agent})
+        archive_api_url = self._url_cache.get_archive_api_url()
+        response = self.session.get(
+            f"{archive_api_url}?sort=new")
+        if response.status_code != 200:
+            raise exceptions.InitialLoadError(f"{archive_api_url}")
 
-    def download_date_range(self, start_date: ArticleDateNumeric, end_date: ArticleDateNumeric):
-        self._check_ready_to_download()
-        assert start_date <= end_date
-        self._load_all_articles_after_start_date(start_date)
-        article_tuples = self._cache.get_article_tuples_by_date_range(start_date, end_date)
-        self._convert_article_tuples_to_pdfs(article_tuples)
+    """
+    JSON shape:
+    {
+        'id': {int} 48162762,
+        'title': {str} 'Title of Article',
+        'post_date' : {str} '2021-10-12T14:52:58.738Z',
+        'canonical_url' : {str} ''https://newsletter.domain.com/p/slug'
+    }
+    """
+
+    def _load_k_articles_into_cache(self, k: int):
+        self._initialize_for_api_call()
+        set_of_articles_saved = set()
+        reached_end_of_articles = False
+        while True:
+            num_articles_saved = len(set_of_articles_saved)
+            get_request_url = f"{self._url_cache.get_archive_api_url()}?sort=new&offset={num_articles_saved}"
+            response = self.session.get(f"{get_request_url}")
+            if response.status_code != 200:
+                raise exceptions.SubsequentLoadError(f"{get_request_url}")
+            json_response = response.json()  # automatically converted to list of dict
+            if len(json_response) == 0:
+                break
+            for json_dict in json_response:
+                article_id = json_dict['id']
+                if article_id in set_of_articles_saved:
+                    reached_end_of_articles = True
+                    continue
+                post_date = json_dict['post_date']
+                converted_date = SubstackArchivesDownloader.convert_json_date_to_yyyymmdd(post_date)
+                title = json_dict['title']
+                canonical_url = json_dict['canonical_url']
+                self._url_cache.append_article_tuple(converted_date, title, canonical_url)
+                set_of_articles_saved.add(article_id)
+                num_articles_saved += 1
+                if num_articles_saved == k:
+                    return
+            if len(set_of_articles_saved) >= k or reached_end_of_articles:
+                break
+            # TODO add random delay to make it more human-like?
+
+    def _load_articles_in_date_range(self, start_date: int, end_date: int):
+        self._initialize_for_api_call()
+        num_articles_loaded = 0
+        while True:
+            get_request_url = f"{self._url_cache.get_archive_api_url()}?sort=new&offset={num_articles_loaded}"
+            response = self.session.get(f"{get_request_url}")
+            if response.status_code != 200:
+                raise exceptions.SubsequentLoadError(f"{get_request_url}")
+            json_response = response.json()  # automatically converted to list of dict
+            if len(json_response) == 0:  # reached the end
+                break
+            num_articles_loaded += len(json_response)
+            earliest_article_date = SubstackArchivesDownloader.convert_json_date_to_yyyymmdd(
+                json_response[-1]['post_date'])
+            if earliest_article_date > end_date:
+                continue
+            most_recent_article_date = SubstackArchivesDownloader.convert_json_date_to_yyyymmdd(
+                json_response[0]['post_date'])
+            if most_recent_article_date < start_date:
+                break
+            # if code reaches here, then we have articles in the date range
+            for json_dict in json_response:
+                post_date = json_dict['post_date']
+                converted_date = SubstackArchivesDownloader.convert_json_date_to_yyyymmdd(post_date)
+                if start_date <= converted_date <= end_date:
+                    title = json_dict['title']
+                    canonical_url = json_dict['canonical_url']
+                    self._url_cache.append_article_tuple(converted_date, title, canonical_url)
+            # TODO add random delay to make it more human-like?
 
     def _convert_article_tuples_to_pdfs(self, tuples: list[ArticleTuple]):
         for article_tuple in tuples:
@@ -189,64 +201,43 @@ class SubstackArchivesDownloader(PDFDownloader):
             self._save_current_page_as_pdf_in_output_folder(filename_path_output)
 
     @staticmethod
-    def process_raw_date_into_string(raw_date: str) -> str:
-        """
-        :param raw_date takes the following formats
-        - if published today: "4 hr ago"
-        - if published this year but not today: "Aug 1"
-        - if published before this year: "Dec 18, 2020"
-        :return the publication date in yyyymmdd
-        """
-        if "hr" in raw_date or "ago" in raw_date:
-            return datetime.today().strftime('%Y%m%d')
-        published_this_year = "," not in raw_date
-        if published_this_year:
-            yyyy = datetime.today().strftime('%Y')
-        else:
-            yyyy = raw_date[-4:]
-            raw_date = raw_date[:-6]
-        mmdd = datetime.strptime(raw_date, '%b %d').strftime('%m%d')
-        return f'{yyyy}{mmdd}'
+    def extract_substack_subdomain(sign_in_url: str):
+        sub_domain_idx = sign_in_url.find('for_pub=') + len('for_pub=')
+        # TODO a bit sloppy; might not work if for_pub= is not at the end of the url
+        return sign_in_url[sub_domain_idx:]
 
     @staticmethod
-    def process_raw_date_into_int(raw_date: str) -> int:
-        return int(SubstackArchivesDownloader.process_raw_date_into_string(raw_date))
+    def convert_json_date_to_yyyymmdd(post_date: str) -> int:
+        return int(datetime.strptime(post_date, '%Y-%m-%dT%H:%M:%S.%fZ').strftime('%Y%m%d'))
 
 
-class UserCredential:
-    def __init__(self):
-        self._username = ""
-        self._password = ""
-        self._is_credential_filled = False
-
-    def get_credential(self) -> tuple[str, str]:
-        if self._is_credential_filled:
-            return self._username, self._password
-        raise exceptions.CredentialsNotLoaded()
-
-    def set_credential(self, input_username: str, input_password: str):
-        self._username = input_username
-        self._password = input_password
-        self._is_credential_filled = True
-
-    def is_credential_filled(self):
-        return self._is_credential_filled
-
-
-class Cache:
+class URLCache:
     def __init__(self, validated_url: str):
         self._root_url = validated_url if validated_url[-1] != '/' else validated_url[:-1]
         self._archive_url = self._root_url + '/archive'
         self._article_tuples: list[ArticleTuple] = []
+        self._substack_url = None
 
-    # Getters for root url and archive url
+    # Getter for archive url
     def get_archive_url(self):
         return self._archive_url
+
+    # Setter and getter for substack url and archive api url
+    def set_substack_url(self, subdomain: str):
+        self._substack_url = f"https://{subdomain}.substack.com"
+
+    def get_substack_url(self):
+        return self._substack_url
+
+    def get_archive_api_url(self):
+        if not self._substack_url:
+            raise exceptions.SubstackUrlNotSet()
+        return self._substack_url + '/api/v1/archive'
 
     # Setters and getters for article tuples
     # TODO a self-balancing tree would be more efficient O(log n) for managing article_tuples
     # for simplicity, we are just linear searching for everything  O(n) time (minimal difference for small n...)
-    def append_article_tuple(self, date: ArticleDateNumeric, title: ArticleTitle, url: ArticleUrl):
+    def append_article_tuple(self, date: ArticlePostDate, title: ArticleTitle, url: ArticleUrl):
         # for assumption that self.article_tuples_cache is sorted from ith to jth most recent
         # need to append article in reverse chronological order (technically can sort also...but meh)
         self._article_tuples.append((date, title, url))
@@ -265,8 +256,8 @@ class Cache:
                 output.append(article)
         return output
 
-    def get_article_tuples_by_date_range(self, start_date: ArticleDateNumeric,
-                                         end_date: ArticleDateNumeric) -> list[ArticleTuple]:
+    def get_article_tuples_by_date_range(self, start_date: ArticlePostDate,
+                                         end_date: ArticlePostDate) -> list[ArticleTuple]:
         assert end_date >= start_date
         output = []
         # TODO: use binary search to find start_date faster?
@@ -291,3 +282,23 @@ class Cache:
         # assumption: self.article_tuples_cache is sorted from ith to jth most recent
         assert k >= 1
         return self._article_tuples[:k]
+
+
+class UserCredential:
+    def __init__(self):
+        self._username = ""
+        self._password = ""
+        self._is_credential_filled = False
+
+    def get_credential(self) -> tuple[str, str]:
+        if not self._is_credential_filled:
+            raise exceptions.CredentialsNotLoaded()
+        return self._username, self._password
+
+    def set_credential(self, input_username: str, input_password: str):
+        self._username = input_username
+        self._password = input_password
+        self._is_credential_filled = True
+
+    def is_credential_filled(self):
+        return self._is_credential_filled

@@ -6,22 +6,17 @@ This program uses Selenium to fire up a browser, log into the user-provided Subs
 
 ## Quick Start
 
-1. Install the required libraries via `pip install -r requirements.txt`
-2. Replace the default ChromeDriver file (in `./utilities/`) to one that corresponds to what your machine is running. Download [here](https://chromedriver.chromium.org/downloads).
+1. Install the required libraries via `pip install -r requirements.txt` (might be good to use `venv`).
+2. Replace ChromeDriver file (`/utilities/chromedriver`) to a more recent version that corresponds to what your machine is running. Download [here](https://chromedriver.chromium.org/downloads).
 3. Run the program using `python3.9 main.py` (the script was written in Python 3.9 is necessary because it offers a simplified typing system compared to previous Python versions. This might present a slight complication to users running an older version of Python).
-4. Follow the instructions shown in the command line. Running the browser in the foreground is advised (see known issue below).
+4. Follow the instructions shown in the command line.
 
 ## Changelog
 
 - February 2022
-	- Update to support Substack newsletters hosted on custom domain
+    - Update to support Substack newsletters hosted on custom domain
+    - Load article metadata into cache using API instead of scrolling through archive page
 - August 2021: Create initial working version
-
-
-## Known Issues
-
-- Sometimes, running the downloader using a headless browser sometimes errors out. **[To update with error message.]**
-- **[UPDATE on 2022-02-05]:** Currently, download via date range isn't working. Downloading most recent k articles still works. Fixing in progress.
 
 ## How It Works
 
@@ -45,9 +40,7 @@ The classes `Directory` and `WaitTime` help `PDFDownloader` fulfill the responsi
 
 `SubstackArchivesDownloader` extends `PDFDownloader` to include methods specific to downloading Substack archives. To do this, it depends on related classes like `UserCredential` and `Cache` to store the user-provided input credentials and the metadata of articles to be downloaded respectively.
 
-After initialization, `SubstackArchivesDownloader` logs in using the user-provided credentials, scrolls down the archive page and saves the relevant metadata of articles to be downloaded (URL, title, and publication date) in `Cache`, and then goes to each article and saves it as a PDF file.
-
-I am aware that, instead of scrolling down and saving the relevant metadata as it loads, it is possible to use the API endpoint of `https://subdomain.substack.com/api/v1/archive` to obtain the (much more precise) metadata instead. This is a feature that will be included in future versions of this code. I am hard-pressed to say which method would be more robust to future changes by Substack.
+After initialization, `SubstackArchivesDownloader` logs in using the user-provided credentials and uses `https://subdomain.substack.com/api/v1/archive` to load the metadata of articles to be downloaded (URL, title, and publication date) in `URLCache`. It then goes to each article's URL and saves it as a PDF file.
 
 ## Work in Progress
 
@@ -60,15 +53,14 @@ While this program works as-is, there is still a long list of possible improveme
 ### To-Do
 
 - Write tests for the project and set up a continuous integration pipeline on GitHub. This would help to prevent breaking changes to the code as updates are made.
-- Get article title, date and URL via API and process the JSON. Having this would provide redundancy to the current method of obtaining such article metadata.
 - Improve input validation and exception-handling (came across this: <https://dev.to/rinaarts/declutter-your-python-code-with-error-handling-decorators-2db9>)
 
 ### Maybe
 
 - Build a simpler Substack Article Downloader such that user can provide specific links to Substack articles that they would like to download.
-- Improve the data structure in the `Cache` for greater efficiency. Also, track additional data (e.g. distinguish between paid and free articles, so as to provide option to only download paywalled articles).  
+- Improve the data structure in `URLCache` for greater efficiency. Also, track additional data (e.g. distinguish between paid and free articles, so as to provide option to only download paywalled articles).
 - More options on saving as PDF (e.g. `printBackground`, page size etc.)
-- Create abstractions to simplify the user interface and get rid of the many, quite confusing `while True` loops.
+- Create abstractions to simplify the user interface and get rid of the many, quite confusing `while True` loops. ([This](https://github.com/google/python-fire) looks promising.)
 
 ### For Further Extension
 

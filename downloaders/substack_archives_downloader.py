@@ -29,7 +29,7 @@ class SubstackArchivesDownloader(PDFDownloader):
     def __init__(self, input_url: str, is_headless: bool = False):
         helper.input_is_url(input_url)
         super().__init__(is_headless)
-        self._url_cache = URLCache(input_url)
+        self._url_cache = Cache(input_url)
         self._user_credential = UserCredential()
         self._signed_in = False
         self.session = None
@@ -211,7 +211,7 @@ class SubstackArchivesDownloader(PDFDownloader):
         return int(datetime.strptime(post_date, '%Y-%m-%dT%H:%M:%S.%fZ').strftime('%Y%m%d'))
 
 
-class URLCache:
+class Cache:
     def __init__(self, validated_url: str):
         self._root_url = validated_url if validated_url[-1] != '/' else validated_url[:-1]
         self._archive_url = self._root_url + '/archive'

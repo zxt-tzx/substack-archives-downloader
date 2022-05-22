@@ -17,10 +17,10 @@ ArticleTuple = tuple[ArticlePostDate, ArticleTitle, ArticleUrl]
 class SubstackArchivesDownloader(PDFDownloader):
     element_selectors: dict[str, Union[str, tuple]] = {
         # elements used in sign-in
-        'menu_button_css': '.menu-button > svg',
-        'sign_in_button_css': '.premium',
+        'get_to_sign_in_page_css': '.desktop-button',
+        'sign_in_button_css': '.button',
         'go_to_login_link_text': 'Log in',
-        'log_in_with_password_link_text': 'log in with password',
+        'log_in_with_password_link_text': 'sign in with password',
         'username_field_xpath': '//input[@name="email"]',
         'password_field_xpath': '//input[@name="password"]',
         'submit_button_xpath': '//button[@type="submit"]',
@@ -69,13 +69,11 @@ class SubstackArchivesDownloader(PDFDownloader):
 
     def _navigate_to_sign_in_page(self):
         self._driver.get(self._url_cache.get_archive_url())
-        menu_button = self._driver.find_element_by_css_selector(self.element_selectors['menu_button_css'])
-        menu_button.click()
-        sign_in_button = self._driver.find_element_by_css_selector(self.element_selectors['sign_in_button_css'])
-        sign_in_url = sign_in_button.get_attribute('href')
+        sign_in_button = self._driver.find_element_by_css_selector(self.element_selectors['get_to_sign_in_page_css'])
+        sign_in_button.click()
+        sign_in_url = self._driver.current_url
         substack_subdomain = SubstackArchivesDownloader.extract_substack_subdomain(sign_in_url)
         self._url_cache.set_substack_url(substack_subdomain)
-        self._driver.get(sign_in_url)
 
     def _log_in_using_browser(self):
         loaded_successfully = self._wait_for_element_to_load(By.LINK_TEXT,

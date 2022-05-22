@@ -13,10 +13,12 @@ This program uses Selenium to fire up a browser, log into the user-provided Subs
 
 ## Changelog
 
+- May 2022
+  - Modify element selectors due to new Substack sign-in UX
 - February 2022
-    - Update to support Substack newsletters hosted on custom domain
-    - Load article metadata into cache using API instead of scrolling through archive page
-    - Headless browser now works properly
+  - Update to support Substack newsletters hosted on custom domain
+  - Load article metadata into cache using API instead of scrolling through archive page
+  - Headless browser now works properly
 - August 2021: Create initial working version
 
 ## How It Works

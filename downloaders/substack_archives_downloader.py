@@ -38,7 +38,8 @@ class SubstackArchivesDownloader(PDFDownloader):
     def log_in(self, input_username: str, input_password: str):
         self._navigate_to_sign_in_page()  # TODO: we can navigate to sign in page without logging in
         self._load_credentials(input_username, input_password)
-        self._log_in_using_browser()
+        # self._log_in_using_browser()
+        self._log_in_using_api()
 
     def download_k_most_recent(self, k: int):
         self._check_ready_to_download()
@@ -75,28 +76,42 @@ class SubstackArchivesDownloader(PDFDownloader):
         substack_subdomain = SubstackArchivesDownloader.extract_substack_subdomain(sign_in_url)
         self._url_cache.set_substack_url(substack_subdomain)
 
-    def _log_in_using_browser(self):
-        loaded_successfully = self._wait_for_element_to_load(By.LINK_TEXT,
-                                                             self.element_selectors['log_in_with_password_link_text'])
-        if not loaded_successfully:
-            raise exceptions.ErrorWhileLoggingIn("clicking go_to_login_button")
-
-        log_in_with_password_button = self._driver.find_element_by_link_text(
-            self.element_selectors['log_in_with_password_link_text'])
-        log_in_with_password_button.click()
-
-        loaded_successfully = self._wait_for_element_to_load(By.XPATH, self.element_selectors['username_field_xpath'])
-        if not loaded_successfully:
-            raise exceptions.ErrorWhileLoggingIn("clicking log_in_with_password_button")
-
+    def _log_in_using_api(self):
+        self.session = requests.Session()
+        selenium_user_agent = self._driver.execute_script("return navigator.userAgent")
+        self.session.headers.update({'User-Agent': selenium_user_agent})
         username, password = self._user_credential.get_credential()
-        username_field = self._driver.find_element_by_xpath(self.element_selectors['username_field_xpath'])
-        username_field.send_keys(username)
-        password_field = self._driver.find_element_by_xpath(self.element_selectors['password_field_xpath'])
-        password_field.send_keys(password)
-        submit_button = self._driver.find_element_by_xpath(self.element_selectors['submit_button_xpath'])
-        submit_button.click()
-        self._signed_in = True
+        response = self.session.post(
+            self.get_login_api_url(),
+            json={"captcha_response": "null",
+                  "email": username,
+                  "for_pub": self._url_cache.get_substack_url_subdomain(),
+                  "password": password,
+                  "redirect": "/"}
+        )
+
+    # def _log_in_using_browser(self):
+    #     loaded_successfully = self._wait_for_element_to_load(By.LINK_TEXT,
+    #                                                          self.element_selectors['log_in_with_password_link_text'])
+    #     if not loaded_successfully:
+    #         raise exceptions.ErrorWhileLoggingIn("clicking go_to_login_button")
+    #
+    #     log_in_with_password_button = self._driver.find_element_by_link_text(
+    #         self.element_selectors['log_in_with_password_link_text'])
+    #     log_in_with_password_button.click()
+    #
+    #     loaded_successfully = self._wait_for_element_to_load(By.XPATH, self.element_selectors['username_field_xpath'])
+    #     if not loaded_successfully:
+    #         raise exceptions.ErrorWhileLoggingIn("clicking log_in_with_password_button")
+    #
+    #     username, password = self._user_credential.get_credential()
+    #     username_field = self._driver.find_element_by_xpath(self.element_selectors['username_field_xpath'])
+    #     username_field.send_keys(username)
+    #     password_field = self._driver.find_element_by_xpath(self.element_selectors['password_field_xpath'])
+    #     password_field.send_keys(password)
+    #     submit_button = self._driver.find_element_by_xpath(self.element_selectors['submit_button_xpath'])
+    #     submit_button.click()
+    #     self._signed_in = True
 
     # Methods for downloading
     def _check_ready_to_download(self):
@@ -106,9 +121,10 @@ class SubstackArchivesDownloader(PDFDownloader):
         #     raise exceptions.NotSignedIn()
 
     def _initialize_for_api_call(self):
-        self.session = requests.Session()
-        selenium_user_agent = self._driver.execute_script("return navigator.userAgent")
-        self.session.headers.update({'User-Agent': selenium_user_agent})
+        if not self.session:
+            self.session = requests.Session()
+            selenium_user_agent = self._driver.execute_script("return navigator.userAgent")
+            self.session.headers.update({'User-Agent': selenium_user_agent})
         archive_api_url = self._url_cache.get_archive_api_url()
         response = self.session.get(
             f"{archive_api_url}?sort=new")
@@ -208,13 +224,17 @@ class SubstackArchivesDownloader(PDFDownloader):
     def convert_json_date_to_yyyymmdd(post_date: str) -> int:
         return int(datetime.strptime(post_date, '%Y-%m-%dT%H:%M:%S.%fZ').strftime('%Y%m%d'))
 
+    @staticmethod
+    def get_login_api_url():
+        return "https://substack.com/api/v1/login"
+
 
 class Cache:
     def __init__(self, validated_url: str):
         self._root_url = validated_url if validated_url[-1] != '/' else validated_url[:-1]
         self._archive_url = self._root_url + '/archive'
         self._article_tuples: list[ArticleTuple] = []
-        self._substack_url = None
+        self._substack_subdomain = None
 
     # Getter for archive url
     def get_archive_url(self):
@@ -222,15 +242,15 @@ class Cache:
 
     # Setter and getter for substack url and archive api url
     def set_substack_url(self, subdomain: str):
-        self._substack_url = f"https://{subdomain}.substack.com"
+        self._substack_subdomain = subdomain
 
-    def get_substack_url(self):
-        return self._substack_url
+    def get_substack_url_subdomain(self):
+        return self._substack_subdomain
 
     def get_archive_api_url(self):
-        if not self._substack_url:
+        if not self._substack_subdomain:
             raise exceptions.SubstackUrlNotSet()
-        return self._substack_url + '/api/v1/archive'
+        return f"https://{self._substack_subdomain}.substack.com/api/v1/archive"
 
     # Setters and getters for article tuples
     # TODO a self-balancing tree would be more efficient O(log n) for managing article_tuples

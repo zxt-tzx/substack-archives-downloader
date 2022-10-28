@@ -17,7 +17,7 @@ ArticleTuple = tuple[ArticlePostDate, ArticleTitle, ArticleUrl]
 class SubstackArchivesDownloader(PDFDownloader):
     element_selectors: dict[str, Union[str, tuple]] = {
         # elements used in sign-in
-        'get_to_sign_in_page_css': '.desktop-button',
+        'get_to_sign_in_page_css': 'button.button.sign-in-link.outline-grayscale',
         'sign_in_button_css': '.button',
         'go_to_login_link_text': 'Log in',
         'log_in_with_password_link_text': 'sign in with password',

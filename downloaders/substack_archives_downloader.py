@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import time
 from typing import Union
 
 import requests
@@ -197,6 +198,7 @@ class SubstackArchivesDownloader(PDFDownloader):
                 continue
             self._driver.get(url)
             self._save_current_page_as_pdf_in_output_folder(filename_path_output)
+            time.sleep(3)
 
     @staticmethod
     def extract_substack_subdomain(sign_in_url: str):

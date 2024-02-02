@@ -11,8 +11,9 @@ from downloaders.pdf_downloader import PDFDownloader
 
 ArticlePostDate = int
 ArticleTitle = str
+ArticleTags = str
 ArticleUrl = str
-ArticleTuple = tuple[ArticlePostDate, ArticleTitle, ArticleUrl]
+ArticleTuple = tuple[ArticlePostDate, ArticleTitle, ArticleTags, ArticleUrl]
 
 
 class SubstackArchivesDownloader(PDFDownloader):
@@ -147,8 +148,12 @@ class SubstackArchivesDownloader(PDFDownloader):
                 post_date = json_dict['post_date']
                 converted_date = SubstackArchivesDownloader.convert_json_date_to_yyyymmdd(post_date)
                 title = json_dict['title']
+                tags = []
+                for tag in json_dict['postTags']:
+                    tags.append(tag['slug'])                    
+                converted_tags = SubstackArchivesDownloader.convert_tags_to_string(tags)
                 canonical_url = json_dict['canonical_url']
-                self._url_cache.append_article_tuple(converted_date, title, canonical_url)
+                self._url_cache.append_article_tuple(converted_date, title, converted_tags, canonical_url)
                 set_of_articles_saved.add(article_id)
                 num_articles_saved += 1
                 if num_articles_saved == k:
@@ -183,14 +188,18 @@ class SubstackArchivesDownloader(PDFDownloader):
                 converted_date = SubstackArchivesDownloader.convert_json_date_to_yyyymmdd(post_date)
                 if start_date <= converted_date <= end_date:
                     title = json_dict['title']
+                    tags = []
+                    for tag in json_dict['postTags']:
+                        tags.append(tag['slug'])                    
+                    converted_tags = SubstackArchivesDownloader.convert_tags_to_string(tags)
                     canonical_url = json_dict['canonical_url']
-                    self._url_cache.append_article_tuple(converted_date, title, canonical_url)
+                    self._url_cache.append_article_tuple(converted_date, title, converted_tags, canonical_url)
             # TODO add random delay to make it more human-like?
 
     def _convert_article_tuples_to_pdfs(self, tuples: list[ArticleTuple]):
         for article_tuple in tuples:
-            date, title, url = article_tuple
-            filename_output = f'{date} {helper.clean_filename(title)}.pdf'
+            date, title, tags, url = article_tuple
+            filename_output = f'{date} - {tags}{helper.clean_filename(title)}.pdf'
             filename_path_output = os.path.join(self._directory.output_path, filename_output)
             if os.path.isfile(filename_path_output):
                 # skip URLs that have been previously downloaded
@@ -210,6 +219,12 @@ class SubstackArchivesDownloader(PDFDownloader):
     def convert_json_date_to_yyyymmdd(post_date: str) -> int:
         return int(datetime.strptime(post_date, '%Y-%m-%dT%H:%M:%S.%fZ').strftime('%Y%m%d'))
 
+    @staticmethod
+    def convert_tags_to_string(tags: []):
+        if tags:
+            return ', '.join(tags) + ' - '
+        else:
+            return ''
 
 class Cache:
     def __init__(self, validated_url: str):
@@ -237,10 +252,10 @@ class Cache:
     # Setters and getters for article tuples
     # TODO a self-balancing tree would be more efficient O(log n) for managing article_tuples
     # for simplicity, we are just linear searching for everything  O(n) time (minimal difference for small n...)
-    def append_article_tuple(self, date: ArticlePostDate, title: ArticleTitle, url: ArticleUrl):
+    def append_article_tuple(self, date: ArticlePostDate, title: ArticleTitle, tags: ArticleTags, url: ArticleUrl):
         # for assumption that self.article_tuples_cache is sorted from ith to jth most recent
         # need to append article in reverse chronological order (technically can sort also...but meh)
-        self._article_tuples.append((date, title, url))
+        self._article_tuples.append((date, title, tags, url))
 
     def get_cache_size(self) -> int:
         return len(self._article_tuples)
@@ -251,7 +266,7 @@ class Cache:
     def get_article_tuples_by_date(self, date: int) -> list[ArticleTuple]:
         output = []
         for article in self._article_tuples:
-            article_date, _, _ = article
+            article_date, _, _, _ = article
             if date == article_date:
                 output.append(article)
         return output
@@ -262,7 +277,7 @@ class Cache:
         output = []
         # TODO: use binary search to find start_date faster?
         for article in self._article_tuples:
-            article_date, _, _ = article
+            article_date, _, _, _ = article
             if start_date <= article_date <= end_date:
                 output.append(article)
         return output

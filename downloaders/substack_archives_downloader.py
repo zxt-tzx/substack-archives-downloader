@@ -42,16 +42,16 @@ class SubstackArchivesDownloader(PDFDownloader):
         self._load_credentials(input_username, input_password)
         self._log_in_using_browser()
 
-    def download_k_most_recent(self, k: int):
+    def download_k_most_recent(self, k: int, download_podcasts: bool = False):
         self._check_ready_to_download()
-        self._load_k_articles_into_cache(k)
+        self._load_k_articles_into_cache(k, download_podcasts)
         article_tuples = self._url_cache.get_most_recent_k_article_tuples(k)
         self._convert_article_tuples_to_pdfs(article_tuples)
 
-    def download_date_range(self, start_date: ArticlePostDate, end_date: ArticlePostDate):
+    def download_date_range(self, start_date: ArticlePostDate, end_date: ArticlePostDate, download_podcasts: bool = False):
         self._check_ready_to_download()
         assert start_date <= end_date
-        self._load_articles_in_date_range(start_date, end_date)
+        self._load_articles_in_date_range(start_date, end_date, download_podcasts)
         article_tuples = self._url_cache.get_article_tuples_by_date_range(start_date, end_date)
         self._convert_article_tuples_to_pdfs(article_tuples)
 
@@ -127,7 +127,7 @@ class SubstackArchivesDownloader(PDFDownloader):
     }
     """
 
-    def _load_k_articles_into_cache(self, k: int):
+    def _load_k_articles_into_cache(self, k: int, download_podcasts: bool):
         self._initialize_for_api_call()
         set_of_articles_saved = set()
         reached_end_of_articles = False
@@ -141,6 +141,8 @@ class SubstackArchivesDownloader(PDFDownloader):
             if len(json_response) == 0:
                 break
             for json_dict in json_response:
+                if json_dict['type'] == "podcast" and not download_podcasts:
+                    continue
                 article_id = json_dict['id']
                 if article_id in set_of_articles_saved:
                     reached_end_of_articles = True
@@ -162,7 +164,7 @@ class SubstackArchivesDownloader(PDFDownloader):
                 break
             # TODO add random delay to make it more human-like?
 
-    def _load_articles_in_date_range(self, start_date: int, end_date: int):
+    def _load_articles_in_date_range(self, start_date: int, end_date: int, download_podcasts: bool):
         self._initialize_for_api_call()
         num_articles_loaded = 0
         while True:
@@ -184,6 +186,8 @@ class SubstackArchivesDownloader(PDFDownloader):
                 break
             # if code reaches here, then we have articles in the date range
             for json_dict in json_response:
+                if json_dict['type'] == "podcast" and not download_podcasts:
+                    continue
                 post_date = json_dict['post_date']
                 converted_date = SubstackArchivesDownloader.convert_json_date_to_yyyymmdd(post_date)
                 if start_date <= converted_date <= end_date:

@@ -21,7 +21,7 @@ class SubstackArchivesDownloader(PDFDownloader):
         'get_to_sign_in_page_css': 'button.button.sign-in-link.outline-grayscale',
         'sign_in_button_css': '.button',
         'go_to_login_link_text': 'Log in',
-        'log_in_with_password_link_text': 'sign in with password',
+        'log_in_with_password_link_text': 'Sign in with password',
         'username_field_xpath': '//input[@name="email"]',
         'password_field_xpath': '//input[@name="password"]',
         'submit_button_xpath': '//button[@type="submit"]',

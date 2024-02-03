@@ -8,6 +8,7 @@ class SubstackArchivesDownloaderUserInterface:
         self.downloader = None
         self.username = None
         self.password = None
+        self.download_podcasts = False
 
     def get_substack_url(self) -> bool:
         while True:
@@ -71,6 +72,23 @@ class SubstackArchivesDownloaderUserInterface:
                 self.downloader.shut_down()
                 return False
 
+    def get_user_download_podcasts_choice(self) -> bool:
+        while True:
+            try:
+                while True:
+                    input_is_download_podcasts = input("Would you like to download Podcast-type posts in addition to Newsletter-type posts? \n"
+                                                       "Please type 'Y' or 'N'.\n")
+                    if input_is_download_podcasts == 'Y' or input_is_download_podcasts == 'N':
+                        break
+                    else:
+                        print("Please type 'Y' or 'N'.") # would be good to accept 'y' or 'n' etc.
+                self.download_podcasts = input_is_download_podcasts == 'Y'
+                return True
+            except Exception as exc:
+                print(exc)
+                self.downloader.shut_down()
+                return False
+
     # TODO decompose this method for easier debugging
     def get_user_download_choices(self) -> bool:
         while True:
@@ -93,7 +111,7 @@ class SubstackArchivesDownloaderUserInterface:
                             # TODO covert date_ranges into something more human readable?
                             print(f"Please wait while articles published between {date_range_start} "
                                   f"to {date_range_end} are being downloaded...")
-                            self.downloader.download_date_range(int(date_range_start), int(date_range_end))
+                            self.downloader.download_date_range(int(date_range_start), int(date_range_end), bool(self.download_podcasts))
                             break
                         else:
                             print("Sorry, please enter a valid date range in the format YYYYMMDD.")
@@ -102,7 +120,7 @@ class SubstackArchivesDownloaderUserInterface:
                         if self.validate_k(user_k):
                             print(f"Please wait while the {user_k} most recently published articles "
                                   "are being downloaded...")
-                            self.downloader.download_k_most_recent(int(user_k))
+                            self.downloader.download_k_most_recent(int(user_k), bool(self.download_podcasts))
                             break
                         else:
                             print("Sorry please enter a valid integer k.")

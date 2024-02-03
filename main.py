@@ -18,6 +18,11 @@ def main() -> None:
         print_upon_exit_failure()
         return
 
+    successful_podcast_download_choice = ui.get_user_download_podcasts_choice()
+    if not successful_podcast_download_choice:
+        print_upon_exit_failure()
+        return
+
     successful_download = ui.get_user_download_choices()
     print_upon_exit_success() if successful_download else print_upon_exit_failure()
 

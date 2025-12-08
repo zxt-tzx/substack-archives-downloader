@@ -7,28 +7,56 @@ This program uses Selenium to fire up a browser, log into the user-provided Subs
 ## Quick Start
 
 1. Ensure you have [uv](https://docs.astral.sh/uv/getting-started/installation/) installed.
-2. Run the program:
+2. Clone the repository and navigate to the project directory.
+3. (Optional but Recommended) Create a `.env` file for configuration:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your credentials and preferences
+   ```
+4. Run the program:
    ```bash
    uv run main.py
    ```
-3. Follow the instructions shown in the command line.
+5. Follow the instructions in the command line (if not fully configured via `.env`).
 
-> Note: ChromeDriver is now managed automatically, so no need to download it manually.
+> **Note**: ChromeDriver is managed automatically, so no need to download it manually.
 
+## Configuration (.env)
+
+You can skip manual input by setting up a `.env` file. See `.env.example` for a template.
+
+| Variable | Description |
+|----------|-------------|
+| `SUBSTACK_EMAIL` | Your Substack login email. |
+| `SUBSTACK_PASSWORD` | Your Substack login password. |
+| `SUBSTACK_URL` | The URL of the newsletter (e.g., `https://author.substack.com/`). |
+| `HEADLESS` | Set to `true` to run the browser in the background, `false` to see it. |
+| `REMOVE_COMMENTS` | Set to `true` to remove the "Discussion" section from downloaded PDFs. |
+| `DOWNLOAD_PODCASTS` | Set to `true` to include podcast posts in the download. |
+| `DOWNLOAD_MODE` | Set to `date` (for date range) or `count` (for recent N articles). |
+| `ARTICLE_COUNT` | Number of articles to download (if mode is `count`). |
+| `DATE_RANGE_START` | Start date in YYYYMMDD format (if mode is `date`). |
+| `DATE_RANGE_END` | End date in YYYYMMDD format (if mode is `date`). |
 
 ## Changelog
 
-- May 2022
+- **December 2025**
+  - **Environment Variables**: Full support for `.env` file to store credentials and preferences.
+  - **Modern Selenium**: Updated to Selenium 4 with `webdriver-manager` for automatic driver management.
+  - **Robustness**: Improved login handling (including CAPTCHA detection) and cleanup logic.
+  - **Features**: Added option to strip comments from PDFs.
+  - **Logging**: Replaced print statements with a proper logging system.
+- **May 2022**
   - Modify element selectors due to new Substack sign-in UX
-- February 2022
+- **February 2022**
   - Update to support Substack newsletters hosted on custom domain
   - Load article metadata into cache using API instead of scrolling through archive page
   - Headless browser now works properly
-- August 2021: Create initial working version
+- **August 2021**: Create initial working version
 
 ## How It Works
 
-There are two classes involved in doing the actual work of downloading the PDF files—`PDFDownloader` and `SubstackArchivesDownloader`. The latter is then wrapped in a user interface object to provide a command line interface for the user.
+There are two main classes involved in doing the actual work of downloading the PDF files—`PDFDownloader` and `SubstackArchivesDownloader`. The latter is then wrapped in a user interface object to provide a command line interface for the user.
 
 ### PDFDownloader
 
@@ -38,7 +66,7 @@ Specifically, `PDFDownloader` is responsible for:
 
 - Initializing the driver with the appropriate settings, depending on whether the browser will be run in the foreground or behind-the-scenes
 - Converting the current page the driver is on into PDF.
-  - If the browser is running in the foreground, this involves the creation of a temp folder, downloading the PDF file, renaming it, and sending it to the output folder. The reason for this complication is Selenium is unable to directly change the file name when running the command `driver.execute_script('window.print();')`. The temp folder will be deleted at the end of the program, so the output should be the same as if the browser ran behind-the-scenes.
+  - If the browser is running in the foreground, this involves the creation of a temp folder, downloading the PDF file, renaming it, and sending it to the output folder.
   - If the browser is running behind-the-scenes, the page is saved as a PDF to the output folder directly.
 - Methods to do with waiting for the page or elements therein to finish loading.
 
@@ -48,24 +76,14 @@ The classes `Directory` and `WaitTime` help `PDFDownloader` fulfill the responsi
 
 `SubstackArchivesDownloader` extends `PDFDownloader` to include methods specific to downloading Substack archives. To do this, it depends on related classes like `UserCredential` and `Cache` to store the user-provided input credentials and the metadata of articles to be downloaded respectively.
 
-After initialization, `SubstackArchivesDownloader` logs in using the user-provided credentials and uses `https://subdomain.substack.com/api/v1/archive` to load the metadata of articles to be downloaded (URL, title, and publication date) into `Cache`. It then goes to each article's URL and saves it as a PDF file.
+After initialization, `SubstackArchivesDownloader` logs in using the user-provided credentials and uses the Substack API (`/api/v1/archive`) to load the metadata of articles to be downloaded (URL, title, and publication date) into `Cache`. It then goes to each article's URL and saves it as a PDF file.
 
 ## To-Do List
 
-- [High] Use a library to create a nicer command line interface. ([This](https://github.com/google/python-fire) looks promising.)
-- [Medium] Improve input validation and exception-handling (came across [this](https://dev.to/rinaarts/declutter-your-python-code-with-error-handling-decorators-2db9)).
-- [Low] Write tests for the project and set up a continuous integration pipeline on GitHub. This would help to prevent breaking changes to the code as updates are made.
-- [Low] More options on saving as PDF (e.g. `printBackground`, page size etc.)
-
-## For Further Extension
-
-- To convert articles into PDF, the browser must visit each article while logged into an account with a subscription. Currently, this is achieved through the user entering their username and password into the program directly.
-  - However, a downside of the current implementation is that less sophisticated might not be able to clone a GitHub project and run it on their local machine.
-  - A possible solution is to convert this current project into an executable application. (Brief Googling reveals `pyinstaller` might be able to achieve this.) But I don’t think unsophisticated users should be in the habit of downloading and running random executable files from the Internet…
-- Another possible solution is to create a web app that downloads the relevant PDFs and transmits them to the user in the form of a .zip file.
-  - Unfortunately, this still requires the user to provide their username and password, this time to a random application on the Internet. I don’t think there is any way to provide assurance that the server is not secretly collecting their username and password.
-  - Strictly speaking, the user could simply use a temporary password, download the relevant files, then change the password after using the web app. But even then, the user is still exposed to potential mischief by the web app during the downloading process…
-- Yet another possible solution is to create a Chrome extension so that the user can log in on her own and use the Chrome extension to automate the downloading of PDFs. Further research is required to see whether this solution is feasible.
+- [ ] Use a library to create a nicer command line interface. ([This](https://github.com/google/python-fire) looks promising.)
+- [ ] Improve input validation and exception-handling.
+- [x] Write tests for the project. (Added unit and integration tests)
+- [ ] More options on saving as PDF (e.g. `printBackground`, page size etc.)
 
 ## Why It’s OK to Download the Archive
 

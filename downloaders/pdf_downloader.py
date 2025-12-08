@@ -2,15 +2,20 @@ from base64 import b64decode
 import json
 import os
 import random
+import shutil
 
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 from utilities import exceptions
+from utilities.logging_config import get_logger
+
+logger = get_logger("pdf_downloader")
 
 
 class PDFDownloader:
@@ -52,12 +57,20 @@ class PDFDownloader:
             chrome_options.add_experimental_option('prefs', profile)
             chrome_options.add_argument('--kiosk-printing')
 
-        return webdriver.Chrome(options=chrome_options, executable_path=ChromeDriverManager().install())
+        service = Service(ChromeDriverManager().install())
+        return webdriver.Chrome(service=service, options=chrome_options)
 
     def shut_down(self):
-        if not self._is_headless:
-            self._directory.delete_temp_folder()
-        self._driver.quit()
+        try:
+            if not self._is_headless:
+                self._directory.delete_temp_folder()
+        except Exception as e:
+            logger.warning(f"Error during cleanup: {e}")
+        finally:
+            try:
+                self._driver.quit()
+            except Exception as e:
+                logger.warning(f"Could not quit driver: {e}")
 
     # Methods for generating PDF
     def _save_current_page_as_pdf_in_output_folder(self, output_path_with_filename: str):
@@ -93,33 +106,16 @@ class PDFDownloader:
                 EC.presence_of_element_located((by, element_target)))
             return True
         except TimeoutException:
-            print("Timeout exception while waiting for element to load")  # TODO proper logging?
+            logger.warning("Timeout exception while waiting for element to load")
             return False
-
-    # TODO figure out how to wait for async javascript to finish loading
-    #  1. Look into polling2
-    #  2. If on Java, this looks promising: https://github.com/swtestacademy/JSWaiter/tree/master/src/test/java
-    #  Tried and failed:
-    #  WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
-    #  WebDriverWait(driver, 10).until(lambda driver: driver.execute_script('return "return jQuery.active') == '0')
-    # def _wait_for_page_to_finish_loading(self):  # TODO WIP
-    #     try:
-    #         WebDriverWait(self._driver, self._wait_time.max_wait_time).until(
-    #             staleness_of(self._driver.find_element_by_tag_name('html')))
-    #         return True
-    #     except TimeoutException:
-    #         print("Timeout exception while waiting for [age to load")
-    #         return False
 
     @staticmethod
     def validate_b64_string_is_pdf(b64_string: bytes):
         if b64_string[0:4] != b'%PDF':
-            # TODO use more specific error?
             raise ValueError('Missing PDF file signature')
 
 
 class Directory:
-    # TODO methods to set different directories?
     def __init__(self, is_headless: bool):
         self._path_to_directory = os.path.dirname(__file__)
         self.output_path = os.path.join(self._path_to_directory, '../output')
@@ -141,9 +137,11 @@ class Directory:
 
     # Tell Directory object to delete its temp folder (as part of wrapping up the program)
     def delete_temp_folder(self):
-        if os.path.isdir(self.temp_path):
-            os.rmdir(self.temp_path)  # remove empty directory
-            # shutil.rmtree(self.temp_path)  # delete directory and all its contents
+        try:
+            if os.path.isdir(self.temp_path):
+                shutil.rmtree(self.temp_path)
+        except Exception as e:
+            logger.warning(f"Could not delete temp folder: {e}")
 
     @staticmethod
     def ensure_folder_exists(path_to_folder: str):
@@ -157,7 +155,6 @@ class Directory:
 
 
 class WaitTime:
-    # TODO include setters to modify wait_time?
     def __init__(self):
         # in seconds
         self._short_wait_time = 0.5

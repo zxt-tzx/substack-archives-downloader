@@ -1,0 +1,14 @@
+[project]
+name = "substack-archives-downloader"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "requests==2.31.0",
+    "selenium==3.141.0",
+    "soupsieve==2.2.1",
+    "urllib3==1.26.18",
+    "validators==0.18.2",
+    "webdriver-manager>=4.0.2",
+]

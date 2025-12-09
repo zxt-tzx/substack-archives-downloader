@@ -5,6 +5,9 @@ from typing import Union
 
 import requests
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 
 from utilities import exceptions, helper
 from utilities.logging_config import get_logger
@@ -40,9 +43,31 @@ class SubstackArchivesDownloader(PDFDownloader):
 
     # Methods for managing sign in
     def log_in(self, input_username: str, input_password: str):
+        self._driver.get(self._url_cache.get_archive_url())
+
+        if self.load_cookies():
+            self._driver.refresh()
+            time.sleep(2)
+            try:
+                # Check if "Sign in" button is present with a short timeout
+                WebDriverWait(self._driver, 3).until(
+                    EC.presence_of_element_located((By.XPATH, self.element_selectors['get_to_sign_in_page_xpath']))
+                )
+                logger.info("Cookies loaded but still not signed in. Proceeding with fresh login.")
+            except TimeoutException:
+                logger.info("Restored session from cookies.")
+                self._signed_in = True
+                return
+
+        if self._is_headless:
+            logger.warning("Running in headless mode without a saved session. "
+                           "If a CAPTCHA appears, login will fail. "
+                           "Please run without headless mode once to solve the CAPTCHA and save your session.")
+
         self._navigate_to_sign_in_page()
         self._load_credentials(input_username, input_password)
         self._log_in_using_browser()
+        self.save_cookies()
 
     def download_k_most_recent(self, k: int, download_podcasts: bool = False):
         self._check_ready_to_download()
@@ -82,7 +107,7 @@ class SubstackArchivesDownloader(PDFDownloader):
         sign_in_button.click()
         
         # Wait for potential redirect or modal
-        time.sleep(2) 
+        time.sleep(1) 
         
         # Try to extract subdomain if possible, but don't fail if we can't
         try:
@@ -124,7 +149,8 @@ class SubstackArchivesDownloader(PDFDownloader):
         submit_button.click()
         
         # Robust check for login success or failure
-        time.sleep(3)  # Wait for network request
+        # Reduced wait time, as we check for URL change dynamically anyway
+        time.sleep(1)  
         
         current_url = self._driver.current_url
         
@@ -132,7 +158,8 @@ class SubstackArchivesDownloader(PDFDownloader):
         if "sign-in" in current_url:
             logger.info("Login not completed yet (possible CAPTCHA). Waiting for you to complete it in the browser...")
             
-            max_retries = 60  # Wait up to 120 seconds
+            # Reduced max retries to 30s (15 * 2s) which is reasonable for human interaction without blocking too long
+            max_retries = 15
             for _ in range(max_retries):
                 if "sign-in" not in self._driver.current_url:
                     break

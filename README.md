@@ -65,6 +65,7 @@ uv run pytest -m "not integration"
   - **Robustness**: Improved login handling (including CAPTCHA detection) and cleanup logic.
   - **Features**: Added option to strip comments from PDFs.
   - **Logging**: Replaced print statements with a proper logging system.
+  - **Session Persistence**: Implemented cookie saving to bypass CAPTCHA in headless mode.
 - **May 2022**
   - Modify element selectors due to new Substack sign-in UX
 - **February 2022**

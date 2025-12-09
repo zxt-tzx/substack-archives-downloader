@@ -10,3 +10,4 @@ htmlcov/
 .venv/
 .env
 .DS_Store
+.cookies.json

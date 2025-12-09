@@ -99,6 +99,31 @@ class PDFDownloader:
                     filename_path_temp = os.path.join(self._directory.temp_path, filename_temp)
                     os.rename(filename_path_temp, filename_path_output)
 
+    def save_cookies(self):
+        try:
+            with open(self._directory.cookie_path, 'w') as file:
+                json.dump(self._driver.get_cookies(), file)
+            logger.debug(f"Cookies saved to {self._directory.cookie_path}")
+        except Exception as e:
+            logger.warning(f"Could not save cookies: {e}")
+
+    def load_cookies(self) -> bool:
+        if not os.path.exists(self._directory.cookie_path):
+            return False
+        try:
+            with open(self._directory.cookie_path, 'r') as file:
+                cookies = json.load(file)
+                for cookie in cookies:
+                    # Selenium expects 'expiry' to be an int, sometimes it's float in json
+                    if 'expiry' in cookie:
+                        cookie['expiry'] = int(cookie['expiry'])
+                    self._driver.add_cookie(cookie)
+            logger.debug(f"Cookies loaded from {self._directory.cookie_path}")
+            return True
+        except Exception as e:
+            logger.warning(f"Could not load cookies: {e}")
+            return False
+
     # not sure if there is a better way of doing this; return boolean so exact exception can vary depending on context
     def _wait_for_element_to_load(self, by: type(By), element_target: str) -> bool:
         try:
@@ -119,6 +144,7 @@ class Directory:
     def __init__(self, is_headless: bool):
         self._path_to_directory = os.path.dirname(__file__)
         self.output_path = os.path.join(self._path_to_directory, '../output')
+        self.cookie_path = os.path.join(self._path_to_directory, '../.cookies.json')
         self._ensure_output_folder_exists()
         if not is_headless:
             self.temp_path = os.path.join(self._path_to_directory, 'temp')

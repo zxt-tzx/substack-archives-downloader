@@ -38,9 +38,28 @@ You can skip manual input by setting up a `.env` file. See `.env.example` for a 
 | `DATE_RANGE_START` | Start date in YYYYMMDD format (if mode is `date`). |
 | `DATE_RANGE_END` | End date in YYYYMMDD format (if mode is `date`). |
 
+## Development
+
+### Running Tests
+
+This project uses `pytest` for testing. To run the tests, use the following command:
+
+```bash
+uv run pytest
+```
+
+This will run all tests and generate a coverage report.
+
+To run only unit tests (excluding integration tests that require a browser):
+
+```bash
+uv run pytest -m "not integration"
+```
+
 ## Changelog
 
 - **December 2025**
+  - **Testing**: Migrated to `pytest` with coverage reporting and improved test structure.
   - **Environment Variables**: Full support for `.env` file to store credentials and preferences.
   - **Modern Selenium**: Updated to Selenium 4 with `webdriver-manager` for automatic driver management.
   - **Robustness**: Improved login handling (including CAPTCHA detection) and cleanup logic.
@@ -82,7 +101,7 @@ After initialization, `SubstackArchivesDownloader` logs in using the user-provid
 
 - [ ] Use a library to create a nicer command line interface. ([This](https://github.com/google/python-fire) looks promising.)
 - [ ] Improve input validation and exception-handling.
-- [x] Write tests for the project. (Added unit and integration tests)
+- [x] Write tests for the project. (Migrated to pytest with coverage)
 - [ ] More options on saving as PDF (e.g. `printBackground`, page size etc.)
 
 ## Why It’s OK to Download the Archive

@@ -14,3 +14,16 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pytest>=8.0.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+markers = [
+    "integration: marks tests as integration tests (requiring external services)",
+]
+addopts = "-v --cov=. --cov-report=term-missing"
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.0.0",
+]

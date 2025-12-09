@@ -64,6 +64,7 @@ uv run pytest -m "not integration"
   - **Modern Selenium**: Updated to Selenium 4 with `webdriver-manager` for automatic driver management.
   - **Robustness**: Improved login handling (including CAPTCHA detection) and cleanup logic.
   - **Features**: Added option to strip comments from PDFs.
+  - **File Organization**: Downloads are now organized into subfolders by newsletter domain.
   - **Logging**: Replaced print statements with a proper logging system.
   - **Session Persistence**: Implemented cookie saving to bypass CAPTCHA in headless mode.
 - **May 2022**
@@ -86,8 +87,8 @@ Specifically, `PDFDownloader` is responsible for:
 
 - Initializing the driver with the appropriate settings, depending on whether the browser will be run in the foreground or behind-the-scenes
 - Converting the current page the driver is on into PDF.
-  - If the browser is running in the foreground, this involves the creation of a temp folder, downloading the PDF file, renaming it, and sending it to the output folder.
-  - If the browser is running behind-the-scenes, the page is saved as a PDF to the output folder directly.
+  - If the browser is running in the foreground, this involves the creation of a temp folder, downloading the PDF file, renaming it, and sending it to the output folder (organized by domain).
+  - If the browser is running behind-the-scenes, the page is saved as a PDF to the output folder directly (organized by domain).
 - Methods to do with waiting for the page or elements therein to finish loading.
 
 The classes `Directory` and `WaitTime` help `PDFDownloader` fulfill the responsibilities outlined above.

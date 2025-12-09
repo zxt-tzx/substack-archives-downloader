@@ -3,6 +3,8 @@ import os
 import time
 from typing import Union
 
+from urllib.parse import urlparse
+
 import requests
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -279,10 +281,23 @@ class SubstackArchivesDownloader(PDFDownloader):
                     self._url_cache.append_article_tuple(converted_date, title, converted_tags, canonical_url)
 
     def _convert_article_tuples_to_pdfs(self, tuples: list[ArticleTuple]):
+        # Determine the domain folder name from the URL
+        url_to_parse = self._url_cache.get_substack_url() or self._url_cache.get_archive_url()
+        parsed_url = urlparse(url_to_parse)
+        domain_folder = parsed_url.netloc
+        
+        # Clean the folder name and create the path
+        domain_folder = helper.clean_filename(domain_folder, allow_dots=True)
+        output_subfolder = os.path.join(self._directory.output_path, domain_folder)
+        
+        # Ensure the subfolder exists
+        if not os.path.exists(output_subfolder):
+            os.makedirs(output_subfolder)
+            
         for article_tuple in tuples:
             date, title, tags, url = article_tuple
             filename_output = f'{date} - {tags}{helper.clean_filename(title)}.pdf'
-            filename_path_output = os.path.join(self._directory.output_path, filename_output)
+            filename_path_output = os.path.join(output_subfolder, filename_output)
             if os.path.isfile(filename_path_output):
                 logger.debug(f"Skipping already downloaded: {title}")
                 continue

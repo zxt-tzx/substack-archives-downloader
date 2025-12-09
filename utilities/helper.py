@@ -17,15 +17,20 @@ def input_email_validation(input_email: str):
         raise exceptions.UsernameNotEmail(input_email)
 
 
-def clean_filename(input_string: str) -> str:
+def clean_filename(input_string: str, allow_dots: bool = False) -> str:
     """
     According to https://stackoverflow.com/a/31976060:
     illegal_chars_in_unix = ['/']
     illegal_chars_in_windows = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
     :param input_string might have illegal chars that might not work as file names
+    :param allow_dots: whether to allow dots in the filename (useful for domain names)
     :return: cleaned string
     """
-    pattern_to_filter = r'[<>"|?*\.]'  # filtering < > " | ? * .
+    if allow_dots:
+        pattern_to_filter = r'[<>"|?*]'
+    else:
+        pattern_to_filter = r'[<>"|?*\.]'  # filtering < > " | ? * .
+        
     pattern_to_replace_with_underscore = r'[:/\\]'  # underscore : / \
     input_sans_illegal_chars = re.sub(pattern_to_replace_with_underscore, '_',
                                       re.sub(pattern_to_filter, '', input_string))

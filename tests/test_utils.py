@@ -16,6 +16,12 @@ class TestHelper:
         assert helper.clean_filename("Title/With/Slashes") == "Title_With_Slashes"
         assert helper.clean_filename("Title: With Colons") == "Title_ With Colons"
         
+        # Test with allow_dots=True
+        assert helper.clean_filename("domain.com", allow_dots=True) == "domain.com"
+        # Test default (allow_dots=False) removes dots
+        assert helper.clean_filename("domain.com") == "domaincom"
+        assert helper.clean_filename("Title...") == "Title"
+        
     def test_input_email_validation(self):
         assert helper.input_email_validation("test@example.com") is None
         

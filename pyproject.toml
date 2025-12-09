@@ -5,10 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "requests==2.31.0",
+    "requests>=2.32.5",
     "selenium==3.141.0",
     "soupsieve==2.2.1",
-    "urllib3==1.26.18",
+    "urllib3>=2.6.1",
     "validators==0.18.2",
     "webdriver-manager>=4.0.2",
 ]

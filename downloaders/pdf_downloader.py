@@ -8,6 +8,7 @@ from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
 
 from utilities import exceptions
 
@@ -51,7 +52,7 @@ class PDFDownloader:
             chrome_options.add_experimental_option('prefs', profile)
             chrome_options.add_argument('--kiosk-printing')
 
-        return webdriver.Chrome(options=chrome_options, executable_path=self._directory.chromedriver_path)
+        return webdriver.Chrome(options=chrome_options, executable_path=ChromeDriverManager().install())
 
     def shut_down(self):
         if not self._is_headless:
@@ -121,9 +122,7 @@ class Directory:
     # TODO methods to set different directories?
     def __init__(self, is_headless: bool):
         self._path_to_directory = os.path.dirname(__file__)
-        self.chromedriver_path = os.path.join(self._path_to_directory, '../utilities/chromedriver')
         self.output_path = os.path.join(self._path_to_directory, '../output')
-        self._raise_exception_if_chromedriver_missing()
         self._ensure_output_folder_exists()
         if not is_headless:
             self.temp_path = os.path.join(self._path_to_directory, 'temp')
@@ -131,10 +130,6 @@ class Directory:
             self._check_temp_folder_is_empty()
 
     # Methods used in initialization
-    def _raise_exception_if_chromedriver_missing(self):
-        if not os.path.exists(self.chromedriver_path):
-            raise exceptions.ChromedriverMissing(self.chromedriver_path)
-
     def _ensure_temp_folder_exists(self):
         Directory.ensure_folder_exists(self.temp_path)
 

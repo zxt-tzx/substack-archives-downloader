@@ -6,10 +6,15 @@ This program uses Selenium to fire up a browser, log into the user-provided Subs
 
 ## Quick Start
 
-1. Install the required libraries via `pip install -r requirements.txt` (might be good to use virtual environment first).
-2. Replace ChromeDriver file (`/utilities/chromedriver`) to a more recent version that corresponds to what your machine is running. Download [here](https://chromedriver.chromium.org/downloads).
-3. Run the program using `python3.9 main.py` (I chose to write in Python 3.9 because it offers a simplified typing system compared to previous Python versions. This might present a slight complication to users running an older version of Python).
-4. Follow the instructions shown in the command line.
+1. Ensure you have [uv](https://docs.astral.sh/uv/getting-started/installation/) installed.
+2. Run the program:
+   ```bash
+   uv run main.py
+   ```
+3. Follow the instructions shown in the command line.
+
+> Note: ChromeDriver is now managed automatically, so no need to download it manually.
+
 
 ## Changelog
 

@@ -62,7 +62,7 @@ uv run pytest -m "not integration"
   - **Testing**: Migrated to `pytest` with coverage reporting and improved test structure.
   - **Environment Variables**: Full support for `.env` file to store credentials and preferences.
   - **Modern Selenium**: Updated to Selenium 4 with `webdriver-manager` for automatic driver management.
-  - **Robustness**: Improved login handling (including CAPTCHA detection) and cleanup logic.
+  - **Robustness**: Improved login handling (including CAPTCHA detection) and cleanup logic. Smart cookie handling gracefully ignores domain mismatches.
   - **Features**: Added option to strip comments from PDFs.
   - **File Organization**: Downloads are now organized into subfolders by newsletter domain.
   - **Logging**: Replaced print statements with a proper logging system.
@@ -97,7 +97,7 @@ The classes `Directory` and `WaitTime` help `PDFDownloader` fulfill the responsi
 
 `SubstackArchivesDownloader` extends `PDFDownloader` to include methods specific to downloading Substack archives. To do this, it depends on related classes like `UserCredential` and `Cache` to store the user-provided input credentials and the metadata of articles to be downloaded respectively.
 
-After initialization, `SubstackArchivesDownloader` logs in using the user-provided credentials and uses the Substack API (`/api/v1/archive`) to load the metadata of articles to be downloaded (URL, title, and publication date) into `Cache`. It then goes to each article's URL and saves it as a PDF file.
+After initialization, `SubstackArchivesDownloader` logs in using the user-provided credentials (or reuses a saved session to bypass CAPTCHA) and uses the Substack API (`/api/v1/archive`) to load the metadata of articles to be downloaded (URL, title, and payment status) into `Cache`. It then goes to each article's URL and saves it as a PDF file.
 
 ## To-Do List
 

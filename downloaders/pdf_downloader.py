@@ -113,15 +113,29 @@ class PDFDownloader:
         try:
             with open(self._directory.cookie_path, 'r') as file:
                 cookies = json.load(file)
-                for cookie in cookies:
-                    # Selenium expects 'expiry' to be an int, sometimes it's float in json
-                    if 'expiry' in cookie:
-                        cookie['expiry'] = int(cookie['expiry'])
+                
+            cookies_loaded_count = 0
+            for cookie in cookies:
+                # Selenium expects 'expiry' to be an int, sometimes it's float in json
+                if 'expiry' in cookie:
+                    cookie['expiry'] = int(cookie['expiry'])
+                
+                try:
                     self._driver.add_cookie(cookie)
-            logger.debug(f"Cookies loaded from {self._directory.cookie_path}")
-            return True
+                    cookies_loaded_count += 1
+                except Exception as e:
+                    # Log debug instead of warning to avoid noise for expected domain mismatches
+                    logger.debug(f"Could not add cookie {cookie.get('name')}: {e}")
+            
+            if cookies_loaded_count > 0:
+                logger.debug(f"Loaded {cookies_loaded_count} cookies from {self._directory.cookie_path}")
+                return True
+            else:
+                logger.warning("No valid cookies were found for the current domain.")
+                return False
+                
         except Exception as e:
-            logger.warning(f"Could not load cookies: {e}")
+            logger.warning(f"Could not load cookies file: {e}")
             return False
 
     # not sure if there is a better way of doing this; return boolean so exact exception can vary depending on context

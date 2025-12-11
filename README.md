@@ -97,7 +97,7 @@ The classes `Directory` and `WaitTime` help `PDFDownloader` fulfill the responsi
 
 `SubstackArchivesDownloader` extends `PDFDownloader` to include methods specific to downloading Substack archives. To do this, it depends on related classes like `UserCredential` and `Cache` to store the user-provided input credentials and the metadata of articles to be downloaded respectively.
 
-After initialization, `SubstackArchivesDownloader` logs in using the user-provided credentials (or reuses a saved session to bypass CAPTCHA) and uses the Substack API (`/api/v1/archive`) to load the metadata of articles to be downloaded (URL, title, and payment status) into `Cache`. It then goes to each article's URL and saves it as a PDF file.
+After initialization, `SubstackArchivesDownloader` logs in using the user-provided credentials (or reuses a saved session to bypass CAPTCHA) and uses the Substack API (`/api/v1/archive`) to load the metadata of articles to be downloaded (URL, title, publication date, and tags) into `Cache`. It then goes to each article's URL and saves it as a PDF file.
 
 ## To-Do List
 

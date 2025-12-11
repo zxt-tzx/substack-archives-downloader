@@ -3,4 +3,11 @@
 /downloaders/__pycache__/
 /utilities/__pycache__/
 /__pycache__/
+tests/__pycache__/
+.pytest_cache/
+.coverage
+htmlcov/
 .venv/
+.env
+.DS_Store
+.cookies.json

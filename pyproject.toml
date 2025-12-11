@@ -1,7 +1,7 @@
 [project]
 name = "substack-archives-downloader"
 version = "0.1.0"
-description = "Add your description here"
+description = "A Selenium-based tool to download Substack newsletter archives as PDF files"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

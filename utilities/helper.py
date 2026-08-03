@@ -8,6 +8,9 @@ from utilities import exceptions
 
 
 def input_is_url(input_url: str) -> None:
+    if not input_url or not input_url.strip():
+        raise exceptions.NotUrlException(input_url)
+
     if not url(input_url, public=True):
         raise exceptions.NotUrlException(input_url)
 
